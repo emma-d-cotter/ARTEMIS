@@ -49,6 +49,7 @@ class weightedNeighbors:
         self.current_model_targets = self.load_detectedTargets()
         self.model =  NearestNeighbors(radius=self.INITIAL_RADIUS)
 
+
     def load_detectedTargets(self):
         '''
         Load existing targets from current_model_targets.csv
@@ -63,11 +64,8 @@ class weightedNeighbors:
                 next(reader,None)
                 for target in reader:
                     current_model_targets.append( DetectedTarget(
-                            features=list(target[1:8]), source=target[8], date=target[10],
-                            classification=float(target[-1])))
-            #print(current_model_targets[0].features)
-        else:
-            print('No existing targets for model')
+                            features=list(map(float,list(target[1:8]))), source=target[8], date=target[10],
+                            classification=str(target[-1])))
 
         return current_model_targets
 
@@ -109,17 +107,15 @@ class weightedNeighbors:
                 self.model.radius = r+x
                 distances,indices = self.model.radius_neighbors(newPoint)
 
-        print(indices)
 
         # predict class of new data
         if len(indices)!=0:
             # calculate weights (arbitrary weights for now)
             weights = self.determine_weights(indices)
-            print(weights)
 
             # sum weights for each class
             classes = existingClasses[list(indices)]
-            classes = np.unique(classes[np.where(classes!=0)])  # ignore zero class (outliers)
+            classes = np.unique(classes[np.where(classes!='0')])  # ignore zero class (outliers)
 
             classWeight = np.array([]) # initialize weight array
 
@@ -130,6 +126,6 @@ class weightedNeighbors:
             newClass = classes[np.argmax(classWeight)]
 
         else:
-            newClass = 0
+            newClass = '0'
 
         return(newClass,indices)
