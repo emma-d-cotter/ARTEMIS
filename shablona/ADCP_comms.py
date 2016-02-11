@@ -1,10 +1,10 @@
 # to do:
-# - pressure sensor --> water height
 # - read in tidal predictions (if file exists) to validate data
 import socket
 import numpy as np
 
-def ADCP_read(udp_IP,udp_port,buff_size,timeout):
+
+def ADCP_read(udp_IP, udp_port, buff_size, timeout):
     """
     Reads ADCP data continously from the specified port.
     **EDITING NOTE - break added after timeout**
@@ -18,21 +18,21 @@ def ADCP_read(udp_IP,udp_port,buff_size,timeout):
 
     # create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((udp_IP,udp_port))
+    sock.bind((udp_IP, udp_port))
     sock.settimeout(timeout)
 
     # read one data packet
-    currents = [];
-    headers = [];
+    currents = []
+    headers = []
     while True:
 
-        # read data. Continue reading if timeout error, attempt to reconnect if there is a different
-        # socket error.
+        # read data. Continue reading if timeout error, attempt to reconnect if
+        # there is a different socket error.
         try:
-            data,addr = sock.recvfrom(buff_size)
+            data, addr = sock.recvfrom(buff_size)
         except socket.timeout:
             if len(currents):
-                process_ADCP(currents,header)
+                process_ADCP(currents, header)
                 currents = []
 
                 # ***temporary exit after burst***
@@ -44,7 +44,7 @@ def ADCP_read(udp_IP,udp_port,buff_size,timeout):
         except socket.error:
             sock.close()
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.bind((udp_IP,udp_port))
+            sock.bind((udp_IP, udp_port))
             sock.settimeout(timeout)
 
         # decode data, if present
@@ -57,7 +57,6 @@ def ADCP_read(udp_IP,udp_port,buff_size,timeout):
             currents.append(current)
             headers.append(header)
             del data
-
 
     sock.close()
 
@@ -95,7 +94,7 @@ def decode_ADCP(data):
     return current, header
 
 
-def process_ADCP(currents,header):
+def process_ADCP(currents, header):
     """
     Calculates velocity magnitude and direction after a burst has finished.
 
@@ -109,17 +108,17 @@ def process_ADCP(currents,header):
     Depth = water depth above ADCP, in m
     """
     currents = np.array(currents)
-    bin_avg = np.mean(currents,axis=0)
-    bins = bin_avg[:,1:4]
-    avg = np.mean(bins,axis=1).round(3)
+    bin_avg = np.mean(currents, axis=0)
+    bins = bin_avg[:, 1:4]
+    avg = np.mean(bins, axis=1).round(3)
 
     heading = np.arctan(avg[1]/avg[0]).round(3)
     speed = (avg[1]**2 + avg[0]**2)**0.5
 
-    pressure = header[3]/0.0001 # dBar to Pa
-    depth = pressure/(g*rho) # fix this correction!
+    pressure = header[3]/0.0001   # dBar to Pa
+    depth = pressure/(g*rho)   # fix this correction!
 
     # save to database
     print("Heading is ", heading)
     print("Speed is ", speed)
-    return heading, speed, depth
+    print("Depth is", depth)
