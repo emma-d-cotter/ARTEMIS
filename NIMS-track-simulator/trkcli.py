@@ -9,28 +9,31 @@ def unpacker(fmt, buff):
 
 
 def get_tracks(buffer):
+    print('###NEW PING###')
     while len(buffer):
-        track, buffer = unpacker('HffffffiHffff', buffer)
+        track, buffer = unpacker('ffiffffffffffH', buffer)
 
-        print("id:", track[0])
-        print("size:", track[1])
-        print("speed:", track[2])
-        print("min_range:", track[3])
-        print("max_range:", track[4])
-        print("min_angle", track[5])
-        print("max_angle", track[6])
-        print("first ping", track[7])
-        print("self.pings_visible", track[8])
-        print("range",  track[9])
-        print("angle", track[10])
-        print("width", track[11])
-        print("height", track[12])
+        print('speed_mps', track[0])
+        print('min_angle', track[1])
+        print('first_ping', track[2])
+        print('min_range_m', track[3])
+        print('target_strength', track[4])
+        print('last_pos_angle', track[5])
+        print('max_angle_m', track[6])
+        print('max_range_m', track[7])
+        print('last_pos_range', track[8])
+        print('width', track[9])
+        print('size_sq_m', track[10])
+        print('pings_visible', track[11])
+        print('height', track[12])
+        print('id', track[13])
+        print('')
 
 
 if __name__ == "__main__":
 
     s = socket.socket()         # Create a socket object
-    host = 'localhost' # Get local machine name
+    host = 'localhost'  # Get local machine name
     port = 5000                # Reserve a port for your service.
 
     s.connect((host, port))
