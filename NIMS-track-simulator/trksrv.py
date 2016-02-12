@@ -2,7 +2,7 @@
 # - calculate actual velocity
 # - change number of targets in FOV
 
-from struct import *
+import struct
 import random
 import time
 import math
@@ -60,11 +60,23 @@ class track ():
         print('Generated track ', self.id)
 
     def get_buffer(self):
-        return pack('ffiffffffffffH', self.speed_mps, self.min_angle_m,
-                    self.first_ping, self.min_range_m, self.target_strength,
-                    self.last_pos_angle, self.max_angle_m, self.max_range_m,
-                    self.last_pos_range, self.width, self.size_sq_m,
-                    self.pings_visible, self.height, self.id)
+        # 'ffiffffffffffH'
+        msg = {"speed_mps": self.speed_mps,
+               "min_angle_m": self.min_angle_m,
+               "first_ping": self.first_ping,
+               "min_range_m": self.min_range_m,
+               "target_strength": self.target_strength,
+               "last_pos_angle": self.last_pos_angle,
+               "max_angle_m": self.max_angle_m,
+               "max_range_m": self.max_range_m,
+               "last_pos_range": self.last_pos_range,
+               "width": self.width,
+               "size_sq_m": self.size_sq_m,
+               "pings_visible": self.pings_visible,
+               "height": self.height,
+               "id": self.id}
+        # print(msg)
+        return msg
 
     def perturb(self):
         t = time.time()
@@ -118,6 +130,19 @@ class handler(socketserver.BaseRequestHandler):
 
         print("dropped out")
 
+
+def format_json(tracks):
+    msg = []
+    for t in tracks:
+        msg.append(t.get_buffer())
+
+    msg = json.dumps(msg)
+    msg = codecs.latin_1_encode(msg)[0]
+    frmt = "=%ds" % len(msg)
+    msg = struct.pack(frmt, msg)
+    return msg
+
+
 if __name__ == "__main__":
     # probability of generating a new track if n tracks < max_targets
     track_prob = 25
@@ -139,9 +164,8 @@ if __name__ == "__main__":
 
     while True:
         # create track packet to write
-        msg = codecs.latin_1_encode('')[0]
-        for t in tracks:
-            msg += t.get_buffer()
+
+        msg = format_json(tracks)
 
         sonar_prop.track_message = msg
         sonar_prop.ping_id += 1

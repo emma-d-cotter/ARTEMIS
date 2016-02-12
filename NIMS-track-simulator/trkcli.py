@@ -1,6 +1,7 @@
 from struct import *
 from pprint import pprint as pp
 import socket               # Import socket module
+import json
 
 
 def unpacker(fmt, buff):
@@ -9,26 +10,9 @@ def unpacker(fmt, buff):
 
 
 def get_tracks(buffer):
-    print('###NEW PING###')
     while len(buffer):
-        track, buffer = unpacker('ffiffffffffffH', buffer)
-
-        print('speed_mps', track[0])
-        print('min_angle', track[1])
-        print('first_ping', track[2])
-        print('min_range_m', track[3])
-        print('target_strength', track[4])
-        print('last_pos_angle', track[5])
-        print('max_angle_m', track[6])
-        print('max_range_m', track[7])
-        print('last_pos_range', track[8])
-        print('width', track[9])
-        print('size_sq_m', track[10])
-        print('pings_visible', track[11])
-        print('height', track[12])
-        print('id', track[13])
-        print('')
-
+        msg, buffer = unpacker("=%ds" % len(buffer), buffer)
+        tracks = json.loads(msg[0].decode("utf-8"))
 
 if __name__ == "__main__":
 
