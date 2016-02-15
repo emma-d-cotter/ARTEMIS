@@ -4,7 +4,7 @@ import socket
 import numpy as np
 
 
-def ADCP_read(udp_IP, udp_port, buff_size, timeout):
+def ADCP_read(udp_IP = "", udp_port = 61557, buff_size = 1024, timeout = 5):
     """
     Reads ADCP data continously from the specified port.
     **EDITING NOTE - break added after timeout**
