@@ -1,131 +1,213 @@
-from enum import Enum
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
-from datetime import datetime
+from scipy import stats
 import os.path
 import csv
+from datetime import datetime
 
-#class Classes(Enum):
- #   Interesting = 1.1
-#  NotInteresting = 1.2
+from sklearn.base import ClassifierMixin
+from sklearn.neighbors.base import NeighborsBase, RadiusNeighborsMixin, \
+        SupervisedIntegerMixin
+from sklearn.utils import check_array
+from sklearn.utils.extmath import weighted_mode
 
-   # FastLarge = 2.1
-    #FastSmall = 2.2
-    #SlowLarge = 2.3
-    #SlowSmall = 2.4
-
-    # SchoolOfFish = 3.1
-    # SingleFish = 3.2
-    # Kelp = 3.3
-    # DolphinOrPorpoise = 3.4
-
-class DetectedTarget:
-
-    features_label = ["","","","","","","",""]
-
-    def __init__(self, features=[], source="Unknown", date=datetime.now(), classification=None):
-        self.features = features
-        self.source = source
-        self.date = date
-        self.classification = classification
-
-class weightedNeighbors:
-
-    def __init__(self,radius=4.0):
-
-        # Global variables
-        self.INITIAL_RADIUS = radius
-        self.SIZE_FEATURE_WEIGHT = 1.0
-        self.SPEED_FEATURE_WEIGHT = 1.0
-        self.SPEED_RELATIVE_TO_CURRENT_FEATURE_WEIGHT = 1.0
-        self.TARGET_STRENGTH_FEATURE_WEIGHT = 1.0
-        self.CURRENT_SPEED_FEATURE_WEIGHT = 1.0
-        self.TIME_OF_DAY_FEATURE_WEIGHT = 1.0
-        self.PASSIVE_ACOUSTICS_FEATURE_WEIGHT = 1.0
-        self.RADIUS_INCREMENT = 0.1 # increment for expanding radius
-        self.DISTANCE_THRESHOLD = 0.01 # distance threshold for determing if two points near equidistant
-
-        # load current model and initialize NearestNeighbors model
-        self.current_model_targets = self.load_detectedTargets()
-        self.model =  NearestNeighbors(radius=self.INITIAL_RADIUS)
+import .config as config
 
 
-    def load_detectedTargets(self):
-        '''
-        Load existing targets from current_model_targets.csv
-        '''
-
-        current_model_targets = []
-
-        if os.path.isfile('current_model_targets.csv'):
-            current_model_targets = []
-            with open('current_model_targets.csv', 'r') as f:
-                reader = csv.reader(f,delimiter = ";")
-                next(reader,None)
-                for target in reader:
-                    current_model_targets.append( DetectedTarget(
-                            features=list(map(float,list(target[1:8]))), source=target[8], date=target[10],
-                            classification=str(target[-1])))
-
-        return current_model_targets
-
-    def fitModel(self):
-        '''
-        Fit current model targets to model
-        '''
-        self.model.fit(np.array(list(map(lambda x: x.features, self.current_model_targets))))
-
-    def determine_weights(self,indices):
-        '''
-        This function will return the weights of points with the desired indices
-        '''
-        pass
-        return np.ones(indices[0].shape)
-
-
-    def classify(self,newPoint):
-        '''
-        Predict class of new target detection(s)
-        '''
-        x = self.RADIUS_INCREMENT
-        d = self.DISTANCE_THRESHOLD
-        r = self.INITIAL_RADIUS
-
-        existingClasses = np.array(list(map(lambda x: x.classification, self.current_model_targets)))
-
-        distances,indices = self.model.radius_neighbors(newPoint)
-
-        # if there are no points in the radius, expand radius by x and check again before classifying point.
-        if indices[0].shape==0 or indices[0].shape==1:
-            self.model.radius = r+x
-            distances,indices = self.model.radius_neighbors(newPoint)
-
-        # else if there are two points from different classes that are close to the same distance
-        # (within distance threshold), expand radius to see if there is another very close point
-        elif indices[0].shape ==2 and existingClasses[list(indices[0])[0]]!=existingClasses[list(indices[0])[1]]:
-            if abs(distances[0]-distances[1]) <= d & existingClasses[0]!=existingClasses[1]:
-                self.model.radius = r+x
-                distances,indices = self.model.radius_neighbors(newPoint)
+def _check_background_coverage(hyperspaces):
+    """"""
+    # TODO: Add comparison of classes to those defined in hyperspace
+    for feature in config.classifier_features:
+        ranges = set()
+        for rule in config.background_hyperspaces:
+            rule_min = rule[feature][0]
+            rule_max = rule[feature][1]
+            for rng in ranges:
+                #    *----*         original range (rng)
+                #  |--------|       rule engulfs orig range
+                if rule_min <= rng[0] and rng[1] <= rule_max:
+                    rng[0] = rule_min
+                    rng[1] = rule_max
+                #    *----*         original range (rng)
+                #  |---|            rule overlaps, but to minimum side
+                elif rule_min <= rng[0]:
+                    rng[0] = rule_min
+                #    *----*         original range (rng)
+                #        |---|      rule overlaps, but to maximum side
+                elif rng[1] <= rule_max:
+                    rng[1] = rule_max
+                #    *----*         original range (rng)
+                #      |-|          original range engulfs rule
+                elif rng[0] <= rule_min and rule_max <= rng[1]:
+                    pass
+                #    *----*         original range (rng)
+                # |-|               rule completely outside of orig range
+                else:
+                    ranges.add( (rule_min,rule_max) )
+        if len(ranges) > 1:
+            raise ValueError("Defined background hyperspaces fail to span all \
+                of {0} feature. Ranges covered: {1}".format(feature, ranges))
 
 
-        # predict class of new data
-        if len(indices)!=0:
-            # calculate weights (arbitrary weights for now)
-            weights = self.determine_weights(indices)
+def _scale_axis(value, axis_name):
+    """Retrieves classifier axis bounds and scales value accordingly."""
+    try:
+        min_bound = config.classifier_axis_bounds[axis_name][0]
+        max_bound = config.classifier_axis_bounds[axis_name][1]
+    except KeyError:
+        raise ValueError("Unable to scale axis {0}.".format(axis_name))
 
-            # sum weights for each class
-            classes = existingClasses[list(indices)]
-            classes = np.unique(classes[np.where(classes!='0')])  # ignore zero class (outliers)
+    return (value - min_bound) / (max_bound - min_bound)
 
-            classWeight = np.array([]) # initialize weight array
+def classification_weights(neigh_dist, neigh_ind, target_space):
+    """Returns desired weights for targets in a given target space."""
+    return np.ones(neigh_dist.shape)
 
-            for i,cl in enumerate(classes):
+class BackgroundClassifier():
+    """"""
+    def fit(self, hyperspaces=config.background_hyperspaces):
+        """"""
+        self.hyperspaces = _check_background_coverage(hyperspaces)
 
-                classWeight = np.append(classWeight,sum(weights[np.where(classes==cl)]))
+    def predict(self, X):
+        """"""
+        for rule in
 
-            newClass = classes[np.argmax(classWeight)]
+class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
+                                SupervisedIntegerMixin, ClassifierMixin):
+    """Classifier implementing a vote among neighbors within a given radius
 
-        else:
-            newClass = '0'
+    Extension of scikit-learn's RadiusNeighborsClassifier that
+    predicts using a weight function based on index in addition to distance.
+    This allows more general weighting schemes. Remaining parameters
+    identical to that of scikit-learn.
 
-        return(newClass,indices)
+    Parameters
+    ----------
+    weights : callable
+        a user-defined function that returns an array of the same shape
+          containing the weights to use. Should accept three parameters:
+        - dist, an array containing distances of neighbors
+        - ind, an array containing indices of neighbors
+        - target_space, TargetSpace instance that maps ind to other target info
+    target_space : TargetSpace object, optional (default = None)
+        a TargetSpace instance that contains map from index to other
+          characteristics (source, datetime of collection) to be used in weight.
+    radius : float, optional (default = 1.0)
+        Range of parameter space to use by default for :meth`radius_neighbors`
+        queries.
+    algorithm : {'auto', 'ball_tree', 'kd_tree', 'brute'}, optional
+        Algorithm used to compute the nearest neighbors:
+        - 'ball_tree' will use :class:`BallTree`
+        - 'kd_tree' will use :class:`KDtree`
+        - 'brute' will use a brute-force search.
+        - 'auto' will attempt to decide the most appropriate algorithm
+          based on the values passed to :meth:`fit` method.
+        Note: fitting on sparse input will override the setting of
+        this parameter, using brute force.
+    leaf_size : int, optional (default = 30)
+        Leaf size passed to BallTree or KDTree.  This can affect the
+        speed of the construction and query, as well as the memory
+        required to store the tree.  The optimal value depends on the
+        nature of the problem.
+    metric : string or DistanceMetric object (default='minkowski')
+        the distance metric to use for the tree.  The default metric is
+        minkowski, and with p=2 is equivalent to the standard Euclidean
+        metric. See the documentation of the DistanceMetric class for a
+        list of available metrics.
+    p : integer, optional (default = 2)
+        Power parameter for the Minkowski metric. When p = 1, this is
+        equivalent to using manhattan_distance (l1), and euclidean_distance
+        (l2) for p = 2. For arbitrary p, minkowski_distance (l_p) is used.
+    outliers: callable, optional (default = None)
+        a user-defined function that returns an array of the same shape
+          containing the fallback save settings to use. Similar to weights.
+        If set to None, ValueError is raised, when outlier is detected.
+        Should accept three parameters:
+        - dist, an array containing distances of neighbors
+        - ind, an array containing indices of neighbors
+        - target_space, TargetSpace instance that maps ind to other target info
+    metric_params : dict, optional (default = None)
+        Additional keyword arguments for the metric function.
+
+    Notes
+
+    -----
+    See :ref:`Nearest Neighbors <neighbors>` in the online documentation
+    for a discussion of the choice of ``algorithm`` and ``leaf_size``.
+    http://en.wikipedia.org/wiki/K-nearest_neighbor_algorithm
+    """
+
+    def __init__(self, radius=1.0, weights,
+                 algorithm='auto', leaf_size=30, p=2, metric='minkowski',
+                 outliers=None, metric_params=None, **kwargs):
+        self._init_params(radius=radius,
+                          algorithm=algorithm,
+                          leaf_size=leaf_size,
+                          metric=metric, p=p, metric_params=metric_params,
+                          **kwargs)
+        self.outlier_function = _check_outlier_coverage(outliers)
+        self.weight_function = weights
+        self.target_space = target_space
+
+    def predict(self, X):
+        """Predict the class labels for the provided data
+        Parameters
+        ----------
+        X : array-like, shape (n_query, n_features), \
+                or (n_query, n_indexed) if metric == 'precomputed'
+            Test samples.
+        Returns
+        -------
+        y : array of shape [n_samples] or [n_samples, n_outputs]
+            Class labels for each data sample.
+        """
+        X = check_array(X, accept_sparse='csr')
+        n_samples = X.shape[0]
+
+        neigh_dist, neigh_ind = self.radius_neighbors(X)
+        inliers = [i for i, nind in enumerate(neigh_ind) if len(nind) != 0]
+        outliers = [i for i, nind in enumerate(neigh_ind) if len(nind) == 0]
+
+        classes_ = self.classes_
+        _y = self._y
+        if not self.outputs_2d_:
+            _y = self._y.reshape((-1, 1))
+            classes_ = [self.classes_]
+        n_outputs = len(classes_)
+
+        if self.outlier_function is not None:
+            neigh_dist[outliers] = 1e-6
+        elif outliers:
+            raise ValueError('No neighbors found for test samples %r, '
+                             'you can try using larger radius, '
+                             'give a label for outliers, '
+                             'or consider removing them from your dataset.'
+                             % outliers)
+
+        weights = self.weights(dist=neigh_dist, ind=neigh_ind,
+                               target_space=self.target_space)
+
+        y_pred = np.empty((n_samples, n_outputs), dtype=classes_[0].dtype)
+        for k, classes_k in enumerate(classes_):
+            pred_labels = np.array([_y[ind, k] for ind in neigh_ind],
+                                   dtype=object)
+            if weights is None:
+                mode = np.array([stats.mode(pl)[0]
+                                 for pl in pred_labels[inliers]], dtype=np.int)
+            else:
+                mode = np.array([weighted_mode(pl, w)[0]
+                                 for (pl, w)
+                                 in zip(pred_labels[inliers], weights)],
+                                dtype=np.int)
+
+            mode = mode.ravel()
+
+            y_pred[inliers, k] = classes_k.take(mode)
+
+        if outliers:
+            y_pred[outliers, :] = self.outlier_label
+
+        if not self.outputs_2d_:
+            y_pred = y_pred.ravel()
+
+        return y_pred
