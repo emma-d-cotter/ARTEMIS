@@ -29,9 +29,8 @@ def save_triggers(socket, target, classification):
                             Save            save none
                             instruments
                             in range
-
-
     """
+
     classes_to_save = [1,2,3]
     PAMGuard = target.getPamGuard()
     ADCP = target.getADCP()
@@ -44,7 +43,7 @@ def save_triggers(socket, target, classification):
             save_trig = ['hydrophones']
         # if there is any detection from NIMS, save all instruments
         else:
-            save_trig = ['hydrophones','M3','blueview','cameras']
+            save_trig = ['hydrophones', 'M3', 'blueview', 'cameras']
     else:
         # if the current speed is greater than the threshold
         if ADCP.speed > ADCP_threshold:
@@ -73,7 +72,7 @@ def evaluate_target_range(target):
     """
     target_min_range = NIMS.min_range_m
 
-    save_trig = ['hydrophones','M3']
+    save_trig = ['hydrophones', 'M3']
 
     if target_min_range > instrument_ranges['camera']:
         save_trig += 'cameras'
