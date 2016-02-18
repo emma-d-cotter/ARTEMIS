@@ -1,3 +1,5 @@
+import numpy as np
+
 instruments = ['adcp', 'camera', 'blueview', 'm3', 'hydrophones']
 
 # Buffer size in seconds
