@@ -13,9 +13,18 @@ from sklearn.utils.extmath import weighted_mode
 import .config as config
 
 
+def _within_range(x, min, max):
+    """"""
+    return min <= x and x <= max
+
+def _within_range(x, tuple):
+    """"""
+    return _within_range(x, tuple[0], tuple[1])
+
 def _check_background_coverage(hyperspaces):
     """"""
     # TODO: Add comparison of classes to those defined in hyperspace
+    num_features_with_full_background = 0
     for feature in config.classifier_features:
         ranges = set()
         for rule in config.background_hyperspaces:
@@ -25,6 +34,7 @@ def _check_background_coverage(hyperspaces):
                 #    *----*         original range (rng)
                 #  |--------|       rule engulfs orig range
                 if rule_min <= rng[0] and rng[1] <= rule_max:
+                if _within_range()
                     rng[0] = rule_min
                     rng[1] = rule_max
                 #    *----*         original range (rng)
@@ -46,7 +56,10 @@ def _check_background_coverage(hyperspaces):
         if len(ranges) > 1:
             raise ValueError("Defined background hyperspaces fail to span all \
                 of {0} feature. Ranges covered: {1}".format(feature, ranges))
-
+        num_features_with_full_background += 1
+    if num_features_with_full_background == 0:
+        raise ValueError("Defined background hyperspaces fail to cover any of \
+                the classifier features, meaning outliers could go unclassified.")
 
 def _scale_axis(value, axis_name):
     """Retrieves classifier axis bounds and scales value accordingly."""
@@ -60,6 +73,12 @@ def _scale_axis(value, axis_name):
 
 def classification_weights(neigh_dist, neigh_ind, target_space):
     """Returns desired weights for targets in a given target space."""
+    for i, ind in enumerate(neigh_ind):
+        target = target_space.classifier_index_to_target[ind]
+        source = target.source
+        distance = neigh_dist[i]
+        time_since_seen = datetime.now() - target.time_of_day
+
     return np.ones(neigh_dist.shape)
 
 class BackgroundClassifier():
@@ -70,7 +89,16 @@ class BackgroundClassifier():
 
     def predict(self, X):
         """"""
-        for rule in
+        for rule in self.hyperspaces:
+            for i, feature in enumerate(config.classifier_features):
+                if feature in rule and not _within_range(X[i], rule[feature]):
+                    break
+            else:
+                # Success, none of the features in rule fail
+                return rule['classification']
+        # Failure for all rules, should be caught by _check_background_coverage
+        raise ValueError("No background classification could be found for \
+                {0}.".format(X))
 
 class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
                                 SupervisedIntegerMixin, ClassifierMixin):
