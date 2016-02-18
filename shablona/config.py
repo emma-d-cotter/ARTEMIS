@@ -3,9 +3,16 @@ instruments = ['adcp', 'camera', 'blueview', 'm3', 'hydrophones']
 # Buffer size in seconds
 instrument_buffer_sizes = {'camera': 15, 'blueview': 15, 'm3':15, 'hydrophones': 15}
 
+# Instrument ranges
+instrument_ranges = {'camera': 8, 'blueview': 10, 'm3': 50}
+
 # This supplies the order and contents for classification features
 classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_day',
 			'current']
+
+# current threshold below which to ignore targets
+# that do not include a PAMGuard detection
+ADCP_threshold = 0.25 # m/s
 
 # Minimum and maximum expected values for each axis
 classifier_axis_bounds = {
