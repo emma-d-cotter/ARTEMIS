@@ -1,6 +1,6 @@
 from struct import *
 from pprint import pprint as pp
-import socket               # Import socket module
+import socket
 import json
 
 
@@ -14,14 +14,15 @@ def get_tracks(buffer):
         msg, buffer = unpacker("=%ds" % len(buffer), buffer)
         tracks = json.loads(msg[0].decode("utf-8"))
 
-if __name__ == "__main__":
-
+def read_tracks():
     s = socket.socket()         # Create a socket object
     host = 'localhost'  # Get local machine name
     port = 5000                # Reserve a port for your service.
 
     s.connect((host, port))
+
     while True:
         buf = s.recv(4096)
         get_tracks(buf)
+
     s.close

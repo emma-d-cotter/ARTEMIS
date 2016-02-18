@@ -1,5 +1,5 @@
-from config import instrument_ranges
-from config import ADCP_threshold
+from .config import instrument_ranges
+from .config import ADCP_threshold
 
 def save_triggers(socket, target, classification):
     """
@@ -21,6 +21,8 @@ def save_triggers(socket, target, classification):
     save         save           is the          save none
     all        hydrophones      classification
                                 interesting?
+                                (defined with
+                                classes_to_save)
                                 /           \
                                /             \
                             Yes:            No:
@@ -30,6 +32,7 @@ def save_triggers(socket, target, classification):
 
 
     """
+    classes_to_save = [1,2,3]
     PAMGuard = target.getPamGuard()
     ADCP = target.getADCP()
     NIMS = target.getNIMS()
@@ -46,7 +49,7 @@ def save_triggers(socket, target, classification):
         # if the current speed is greater than the threshold
         if ADCP.speed > ADCP_threshold:
             # if the class is interesting
-            if classification = ****:
+            if classification in classes_to_save:
                 save_trig = evaluate_target_range(target, NIMS)
             else:
                 save_trig = []

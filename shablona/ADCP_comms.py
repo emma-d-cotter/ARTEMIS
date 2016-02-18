@@ -116,9 +116,9 @@ def process_ADCP(currents, header):
     speed = (avg[1]**2 + avg[0]**2)**0.5
 
     pressure = header[3]/0.0001   # dBar to Pa
-    depth = pressure/(g*rho)   # fix this correction!
+    # depth = pressure/(g*rho)   # fix this correction!
 
     # save to database
     print("Heading is ", heading)
     print("Speed is ", speed)
-    print("Depth is", depth)
+    # print("Depth is", depth)

@@ -35,7 +35,7 @@ background_hyperspaces = [
 	'speed': (0,1), # m/s
 	'deltav': (0,0.5), # m/s
 	'target_strength': (0,90), # ??
-	'classification': 'Small Fish},
+	'classification': 'Small Fish'},
 
 	{'size': (-np.inf, np.inf), # m^2
 	'speed': (-np.inf, np.inf), # m/s
@@ -49,4 +49,5 @@ background_hyperspaces = [
 classifications = {
 	1: "Marine Mammal",
 	2: "Small Fish",
+	3: "Outliers"
 }
