@@ -9,20 +9,26 @@ classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_da
 
 # Minimum and maximum expected values for each axis
 classifier_axis_bounds = {
-	'size': (0, 5), # m^2
+	'size': (0, 3), # m^2
 	'speed': (0, 5), # m/s
-	'deltav': (5.0, 100.0), # m/s
-	'target_strength': (0, 1), # ??
+	'deltav': (0, 4), # m/s
+	'target_strength': (0, 150), # mean intensity
 	'time_of_day': (0, 24), # hours
 	'current': (-2, 2) } # m/s
 
 # Background
 background_hyperspaces = [
-	{'size': (1,5), # m^2
-	'speed': (1,6), # m/s
-	'deltav': (-0.5,0.5), # m/s
-	'target_strength': (0.7,1.0), # ??
-	'classification': 'Class1'},
+	{'size': (.25, 3), # m^2
+	'speed': (1, 5), # m/s
+	'deltav': (0.5, 4), # m/s
+	'target_strength': (90, 150), # ??
+	'classification': 'Marine Mammal'},
+
+	{'size': (0,.25), # m^2
+	'speed': (0,1), # m/s
+	'deltav': (0,0.5), # m/s
+	'target_strength': (0,90), # ??
+	'classification': 'Small Fish},
 
 	{'size': (-np.inf, np.inf), # m^2
 	'speed': (-np.inf, np.inf), # m/s
@@ -34,6 +40,6 @@ background_hyperspaces = [
 
 # Classifications
 classifications = {
-	1: "Some class",
-	2: "Some other class"
+	1: "Marine Mammal",
+	2: "Small Fish",
 }
