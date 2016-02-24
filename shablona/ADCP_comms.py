@@ -121,4 +121,6 @@ def process_ADCP(currents, header):
     # save to database
     print("Heading is ", heading)
     print("Speed is ", speed)
+
+    vel = [speed, heading]
     # print("Depth is", depth)
