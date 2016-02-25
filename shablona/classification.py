@@ -13,16 +13,28 @@ from sklearn.utils.extmath import weighted_mode
 import .config as config
 
 
-def _within_range(x, min, max):
-    """"""
+def _within_interval(x, min, max):
+    """Utility function returns boolean if in interval (inclusive, both sides)."""
     return min <= x and x <= max
 
-def _within_range(x, tuple):
-    """"""
-    return _within_range(x, tuple[0], tuple[1])
+def _within_interval(x, interval):
+    """Utility function returns boolean if in interval (inclusive, both sides)."""
+    return _within_range(x, interval[0], interval[1])
 
 def _check_background_coverage(hyperspaces):
-    """"""
+    """Checks that every feature defined in the background hyperspace
+    used for outliers are defined everywhere between negative infinity
+    and infinity. Also checks that background defined on at least one
+    feature.
+
+    Throws ValueError if hyperspace fails, returns nothing otherwise.
+
+    Parameters
+    ----------
+    hyperspaces : list of dicts
+        List of rules, where each rule is a dictionary with classifier
+        features as keys and a tuple (min, max) as the value.
+    """
     # TODO: Add comparison of classes to those defined in hyperspace
     num_features_with_full_background = 0
     for feature in config.classifier_features:
@@ -88,10 +100,19 @@ class BackgroundClassifier():
         self.hyperspaces = _check_background_coverage(hyperspaces)
 
     def predict(self, X):
-        """"""
+        """Predict the class labels for the provided data
+        Parameters
+        ----------
+        X : array-like, shape (n_query, n_features)
+            Test samples.
+        Returns
+        -------
+        y : array of shape [n_samples] or [n_samples, n_outputs]
+            Class labels for each data sample.
+        """
         for rule in self.hyperspaces:
             for i, feature in enumerate(config.classifier_features):
-                if feature in rule and not _within_range(X[i], rule[feature]):
+                if feature in rule and not _within_interval(X[i], rule[feature]):
                     break
             else:
                 # Success, none of the features in rule fail
@@ -158,7 +179,6 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
         Additional keyword arguments for the metric function.
 
     Notes
-
     -----
     See :ref:`Nearest Neighbors <neighbors>` in the online documentation
     for a discussion of the choice of ``algorithm`` and ``leaf_size``.
@@ -232,6 +252,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
 
             y_pred[inliers, k] = classes_k.take(mode)
 
+        # TODO: Replace with use of the BackgroundClassifier.fit()
         if outliers:
             y_pred[outliers, :] = self.outlier_label
 
