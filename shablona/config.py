@@ -1,5 +1,12 @@
 import numpy as np
 
+
+# name of site of current deployment. this will be added as an attribute to
+# classified targets. site_name_auto indicates that a classification was
+# determined by the classifier, and site_name_manual indicates that a
+# classification was either entered or verified during manual review
+site_name = ['MSL']
+
 instruments = ['adcp', 'camera', 'blueview', 'm3', 'hydrophones']
 
 # Buffer size in seconds

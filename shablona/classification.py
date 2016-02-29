@@ -84,14 +84,43 @@ def _scale_axis(value, axis_name):
     return (value - min_bound) / (max_bound - min_bound)
 
 def classification_weights(neigh_dist, neigh_ind, target_space):
-    """Returns desired weights for targets in a given target space."""
+    """
+    Returns desired weights for targets in a given target space.
+
+    For each neighbor, the weight is a function of distance and data source:
+    weight = 1/distance * source_weight
+
+    source_weight is determined based on the physical site of a target (current
+    site, or a previous deployment) and whether the target has been manually
+    reviewed.
+    """
+
+    weights = []
+    # determine weight for each neighbor
     for i, ind in enumerate(neigh_ind):
         target = target_space.classifier_index_to_target[ind]
         source = target.source
-        distance = neigh_dist[i]
-        time_since_seen = datetime.now() - target.time_of_day
 
-    return np.ones(neigh_dist.shape)
+        # using source, determine source_weight. If source is not formatted
+        # correctly, assign weight of 1
+        if source.startswith(config.site_name):
+            if source.endswith('manual'):
+                source_weight = 1
+            elif source.endswith('auto'):
+                source_weight = 0.9
+        else:
+            if source.endswith('manual'):
+                source_weight = 0.9
+            elif source.endswith('auto'):
+                source_weight = 0.8
+            else:
+                source_weight = 1
+
+        distance = neigh_dist[i]
+
+        weights += (1/distance) * source_weight
+
+    return np.array(weights)
 
 class BackgroundClassifier():
     """"""

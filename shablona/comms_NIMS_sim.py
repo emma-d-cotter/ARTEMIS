@@ -1,3 +1,9 @@
+"""
+Reads json data stream over socket from NIMS simulator.
+
+Format is in ../NIMS-track-simulator/ex.json
+"""
+
 from struct import *
 from pprint import pprint as pp
 import socket
