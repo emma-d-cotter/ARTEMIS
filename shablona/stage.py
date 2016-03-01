@@ -10,7 +10,7 @@ class Stage:
         self.data_queues = {}
         for stream in config.data_streams:
             self.data_queues[stream] = []
-        if stream is 'nims-simulator':
+        if stream == 'nims-simulator':
             self.data_queues[stream] = {}
 
     def processDataBeforeStage(self, stream, data):
@@ -61,9 +61,11 @@ class Stage:
             raise ValueError("Error adding data to stage. Stream {0} not \
                               defined in config file.".format(stream))
         stageIndices = self.processDataBeforeStage(stream, data)
-        if stream is 'nims-simulator':
+        if stream == 'nims-simulator':
             for track_id in stageIndices:
-                self.data_queues[stream][track_id] = stageIndices[track_id]
+                if track_id not in self.data_queues[stream]:
+                    self.data_queues[stream][track_id] = []
+                self.data_queues[stream][track_id].append(stageIndices[track_id])
         else:
             self.data_queues[stream].append(stageIndices)
         target = self.streamDataToTarget(stream, data)
