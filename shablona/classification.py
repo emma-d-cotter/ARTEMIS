@@ -10,7 +10,7 @@ from sklearn.neighbors.base import NeighborsBase, RadiusNeighborsMixin, \
 from sklearn.utils import check_array
 from sklearn.utils.extmath import weighted_mode
 
-import .config as config
+from . import config
 
 
 def _within_interval(x, min, max):
@@ -46,7 +46,6 @@ def _check_background_coverage(hyperspaces):
                 #    *----*         original range (rng)
                 #  |--------|       rule engulfs orig range
                 if rule_min <= rng[0] and rng[1] <= rule_max:
-                if _within_range()
                     rng[0] = rule_min
                     rng[1] = rule_max
                 #    *----*         original range (rng)
@@ -214,7 +213,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
     http://en.wikipedia.org/wiki/K-nearest_neighbor_algorithm
     """
 
-    def __init__(self, radius=1.0, weights,
+    def __init__(self, weights, radius=1.0,
                  algorithm='auto', leaf_size=30, p=2, metric='minkowski',
                  outliers=None, metric_params=None, **kwargs):
         self._init_params(radius=radius,
