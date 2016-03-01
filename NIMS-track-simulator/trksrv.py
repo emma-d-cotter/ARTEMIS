@@ -131,11 +131,12 @@ class handler(socketserver.BaseRequestHandler):
         print("dropped out")
 
 
-def format_json(tracks):
-    msg = []
+def format_json(tracks, ping_num):
+    tracks_msg = []
     for t in tracks:
-        msg.append(t.get_buffer())
+        tracks_msg.append(t.get_buffer())
 
+    msg = {"ping_num": ping_num, "tracks":tracks_msg, "num_tracks":len(tracks)}
     msg = json.dumps(msg)
     msg = codecs.latin_1_encode(msg)[0]
     frmt = "=%ds" % len(msg)
@@ -161,11 +162,12 @@ if __name__ == "__main__":
     srv_thread.start()
 
     counts = 0
+    ping_num = 0
 
     while True:
         # create track packet to write
 
-        msg = format_json(tracks)
+        msg = format_json(tracks, ping_num)
 
         sonar_prop.track_message = msg
         sonar_prop.ping_id += 1
@@ -194,3 +196,5 @@ if __name__ == "__main__":
         time.sleep(1.0 / sonar_prop.ping_rate_hz)
         sonar_prop.track_event.clear()
         sonar_prop.end_event.set()
+
+        ping_num += 1
