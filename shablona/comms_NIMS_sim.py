@@ -32,14 +32,14 @@ def get_tracks(stage_instance, buffer):
         print(nims_data['num_tracks'], ' tracks detected')
 
         # TODO - ask NIMS to send timestamp with ping number
-        timestamp = datetime.datetime.now()
+        timestamp = datetime.datetime.utcnow()
         stage_instance.addDataToStage([timestamp, nims_data['tracks']])
 
 def read_tracks(stage_instance):
     """
     Function to read data from NIMS simulator, and send to stage.
     """
-    
+
     s = socket.socket()         # Create a socket object
     host = 'localhost'  # Get local machine name
     port = 5000                # Reserve a port for your service.
