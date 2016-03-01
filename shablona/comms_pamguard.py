@@ -1,6 +1,7 @@
 import socket
+import datetime
 
-def PAMGuard_read(udp_IP = "",udp_port = 8000,buff_size = 1024,timeout = 0.1):
+def PAMGuard_read(stage_instance, udp_IP = "",udp_port = 8000,buff_size = 1024,timeout = 0.1):
     """
     Reads ADCP data continously from the specified port.
 
@@ -35,7 +36,13 @@ def PAMGuard_read(udp_IP = "",udp_port = 8000,buff_size = 1024,timeout = 0.1):
             data = data.decode("utf-8")
             if data.endswith('ZZZZ') and data.startswith('AAAA'):
                 detection = data[4:-4]
+                timestamp = datetime.datetime.utcnow()
+
+                pamguard_data = [timestamp, detection]
+                stage_instance.addDataToStage('pamguard', pamguard_data)
+
                 print("PAMGuard Detection of type: ", detection)
+
                 del data
             else:
                 del data

@@ -4,7 +4,7 @@ import socket
 import numpy as np
 
 
-def ADCP_read(udp_IP = "", udp_port = 61557, buff_size = 1024, timeout = 5):
+def ADCP_read(stage_instance, udp_IP = "", udp_port = 61557, buff_size = 1024, timeout = 5):
     """
     Reads ADCP data continously from the specified port.
     **EDITING NOTE - break added after timeout**
@@ -35,9 +35,6 @@ def ADCP_read(udp_IP = "", udp_port = 61557, buff_size = 1024, timeout = 5):
                 process_ADCP(currents, header)
                 currents = []
 
-                # ***temporary exit after burst***
-                sock.close()
-                break
             else:
                 pass
 
@@ -94,7 +91,7 @@ def decode_ADCP(data):
     return current, header
 
 
-def process_ADCP(currents, header):
+def process_ADCP(stage_instance, currents, header):
     """
     Calculates velocity magnitude and direction after a burst has finished.
 
@@ -105,8 +102,10 @@ def process_ADCP(currents, header):
     Outputs:
     Heading = velocity direction (in radians from magnetic north)
     Speed = magintude of horizontal velocity (East and North)
-    Depth = water depth above ADCP, in m
+    Timestamp = end of burst in unix time format
     """
+    timestamp = header[0]
+
     currents = np.array(currents)
     bin_avg = np.mean(currents, axis=0)
     bins = bin_avg[:, 1:4]
@@ -118,9 +117,6 @@ def process_ADCP(currents, header):
     pressure = header[3]/0.0001   # dBar to Pa
     # depth = pressure/(g*rho)   # fix this correction!
 
-    # save to database
-    print("Heading is ", heading)
-    print("Speed is ", speed)
+    adcp_data = [timestamp, speed, heading]
 
-    vel = [speed, heading]
-    # print("Depth is", depth)
+    stage_instance.addDataToStage('adcp', adcp_data)
