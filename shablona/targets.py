@@ -1,5 +1,5 @@
 import .config as config
-
+from .config import _scale_axis
 
 class Target:
     """"""
@@ -13,24 +13,24 @@ class Target:
 
     # TODO: convert get functions to automated format, likely getData('nims')
     def getNIMS(self, index):
-        if 'nims' in self.target_space.data_streams:
-            return self.target_space.data_streams['nims'][index]
+        if 'nims' in self.target_space.input_data:
+            return self.target_space.input_data['nims'][index]
 
     def getPamGuard(self, index):
-        if 'pamguard' in self.target_space.data_streams:
-            return self.target_space.data_streams['pamguard'][index]
+        if 'pamguard' in self.target_space.input_data:
+            return self.target_space.input_data['pamguard'][index]
 
     def getADCP(self, index):
-        if 'adcp' in self.target_space.data_streams:
-            return self.target_space.data_streams['adcp'][index]
+        if 'adcp' in self.target_space.input_data:
+            return self.target_space.input_data['adcp'][index]
 
 class TargetSpace:
     """"""
     def __init__(self):
         self.targets = []
-        self.data_streams = {}
-        for stream in config.data_streams:
-            self.data_streams[stream] = []
+        self.input_data = {}
+        for stream in config.input_streams:
+            self.input_data[stream] = []
         self.classifier_features = []
         self.classifier_classifications = []
         self.classifier_index_to_target = {}
