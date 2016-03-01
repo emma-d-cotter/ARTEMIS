@@ -1,9 +1,11 @@
-import .config as config
-from .config import _scale_axis
+from datetime import datetime
+
+from . import config
+from .classification import _scale_axis
 
 class Target:
     """"""
-    def __init__(self, source="Unknown", date=datetime.now(), indices=None):
+    def __init__(self, source="Unknown", date=datetime.utcnow(), indices=None):
         self.source = source
         self.date = date
         if data_indices == None:
@@ -26,10 +28,20 @@ class Target:
 
 class TargetSpace:
     """"""
+
+    headers = {}
+    headers['adcp'] = ['timestamp', 'speed', 'heading']
+    headers['pamguard'] = ['timestamp']
+    headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
+            'target_strength', 'width', 'height', 'size_sq_m', 'speed_mps',
+            'min_angle_m', 'min_range_m', 'max_angle_m', 'max_range_m',
+            'last_pos_angle', 'last_pos_range']
+    headers['classifier'] = []  # Should these be relative to input headers?
+
     def __init__(self):
         self.targets = []
         self.input_data = {}
-        for stream in config.input_streams:
+        for stream in config.data_streams:
             self.input_data[stream] = []
         self.classifier_features = []
         self.classifier_classifications = []
@@ -63,9 +75,8 @@ class TargetSpace:
                                         'target_strength'),
                                 _scale_axis(record['time_of_day'],
                                         'time_of_day'),
-                                _scale_axis(record['current'], 'current')])
-                            self.classifier_classifications.
-                                    append(record['classification'])
+                                _scale_axis(record['current'], 'current'))
+                            self.classifier_classifications.append(record['classification'])
 
             else:
                 raise IOError("Unable to find csv file {0} to load targets.".
