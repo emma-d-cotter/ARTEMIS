@@ -107,6 +107,8 @@ def process_ADCP(currents, header):
     Speed = magintude of horizontal velocity (East and North)
     Depth = water depth above ADCP, in m
     """
+    timestamp = header[0]
+
     currents = np.array(currents)
     bin_avg = np.mean(currents, axis=0)
     bins = bin_avg[:, 1:4]
@@ -118,9 +120,4 @@ def process_ADCP(currents, header):
     pressure = header[3]/0.0001   # dBar to Pa
     # depth = pressure/(g*rho)   # fix this correction!
 
-    # save to database
-    print("Heading is ", heading)
-    print("Speed is ", speed)
-
-    vel = [speed, heading]
-    # print("Depth is", depth)
+    vel = [timestamp, speed, heading]
