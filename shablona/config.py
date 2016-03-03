@@ -24,11 +24,10 @@ instrument_buffer_sizes = {'adcp': 0,
 #                           together than this value, they will be considered
 #                           to be saved in the same buffer. Otherwise, two
 #                           separate triggers will be sent)
-# wait_before_send: number of seconds to wait before sending trigger
-#                   signal to LabView after detection
+# time_before_target: number of seconds to save before target detection
 saving_parameters = {'buffer_overlap': 2,
 					  'min_time_between_targets': 5,
-					  'wait_before_send': 10}
+					  'time_before_target': 5}
 
 # Instrument ranges
 instrument_ranges = {'camera': 8,

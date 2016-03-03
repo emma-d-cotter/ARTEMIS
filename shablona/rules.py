@@ -62,7 +62,7 @@ def send_save_triggers(socket, target, classification, trigger_status):
 
     if new_trigs
 
-    trigger_status = is_time_to_send(socket, new_trigs, trigger_status)
+    trigger_status = is_time_to_send(sock, new_trigs, trigger_status)
 
     return trigger_status
 
@@ -90,7 +90,7 @@ def evaluate_target_range(target):
     return new_trigs
 
 
-def is_time_to_send(socket, udp_IP, udp_port, new_trigs, trigger_status):
+def is_time_to_send(sock, udp_IP, udp_port, new_trigs, trigger_status):
     """
     Add any new triggers to trigger_status, and determine what, if any save
     triggers to send to LabView.
@@ -106,22 +106,17 @@ def is_time_to_send(socket, udp_IP, udp_port, new_trigs, trigger_status):
     """
     trigs_to_send = []
 
-    # current timestamp
     timestamp = datetime.utcnow()
 
-    # extract information from trigger_status
     unsent_trigs = trigger_status['unsent_trigs']
     last_trigger = trigger_status['last_trigger']
-
-    # extract saving parameters
     buffer_overlap = saving_parameters['buffer_overlap']
     min_time_between_targets = saving_parameters['min_time_between_targets']
-    wait_before_send = saving_parameters['wait_before_send']
+    time_before_target = saving_parameters['time_before_target']
 
     # add any new triggers to trigger_status list
     for inst in new_trigs:
         unsent_trigs[inst].append(timestamp)
-
 
     # for all triggers that have not been sent yet (unsent_trigs)
     for inst in unsent_trigs:
@@ -136,15 +131,13 @@ def is_time_to_send(socket, udp_IP, udp_port, new_trigs, trigger_status):
 
             # Determine if more time than "wait_before_send" (from config) has elapsed
             # since detection.
-            if time_since_detection >= wait_before_send:
+            if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
 
                 # Determine if sufficient time has passed since last trigger was sent to inst to
                 # create an overlap of "buffer_overlap" (from config) in the saved data
                 if time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap):
 
-                    # remove from unsent_trigs
                     del unsent_trigs[inst][0]
-
                     trigs_to_send.append(inst)
                     last_trigger[inst] = timestamp
 
@@ -172,7 +165,6 @@ def delta_t_in_seconds(datetime1, datetime2):
     """
     delta_t = datetime1 - datetime2
     return delta_t.days*(60*60*24) + delta_t.seconds + delta_t.microseconds/1000
-
 
 
 def send_triggers(sock, udp_IP, udp_port, trigs_to_send):
