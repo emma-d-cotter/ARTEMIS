@@ -120,21 +120,24 @@ class SendTriggers:
         for inst in unsent_trigs:
             if unsent_trigs[inst]:
                 # calculate elapsed time since the target was detected
-                time_since_detection = self.delta_t_in_seconds(timestamp, unsent_trigs[inst][0])
+                time_since_detection = self.delta_t_in_seconds(
+                    timestamp, unsent_trigs[inst][0])
                 print(time_since_detection, ' seconds since last ', inst, ' detection')
 
                 # calculate elapsed time since the last trigger for this instrument
-                time_since_last_trigger = self.delta_t_in_seconds(timestamp, last_trigger[inst])
+                time_since_last_trigger = self.delta_t_in_seconds(
+                    timestamp, last_trigger[inst])
                 print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
 
-                # Determine if more time than "wait_before_send" (from config) has elapsed
-                # since detection.
+                # Determine if more time than "wait_before_send" (from config)
+                # has elapsed since detection.
                 if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
 
                     # Determine if sufficient time has passed since last trigger was
                     # sent to inst to create an overlap of "buffer_overlap" (from
                     # config) in the saved data
-                    if time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap):
+                    if time_since_last_trigger >= (
+                        instrument_buffer_sizes[inst] - buffer_overlap):
 
                         del unsent_trigs[inst][0]
                         trigs_to_send.append(inst)
@@ -143,7 +146,8 @@ class SendTriggers:
                         # remove triggers that are within min_time_between_targets (i.e.
                         # already saved by this buffer)
                         for index, unsent_trig in enumerate(unsent_trigs[inst]):
-                            time_since_detection = self.delta_t_in_seconds(last_trigger[inst], unsent_trigs[inst][index])
+                            time_since_detection = self.delta_t_in_seconds(
+                                last_trigger[inst], unsent_trigs[inst][index])
 
                             if time_since_detection < min_time_between_targets:
                                 del unsent_trigs[inst][index]
@@ -159,9 +163,12 @@ class SendTriggers:
     def delta_t_in_seconds(self, datetime1, datetime2):
         """
         calculate delta t in seconds between two datetime objects
+        (returns absolute value, so order of dates is insignifigant)
         """
         delta_t = datetime1 - datetime2
-        return delta_t.days*(60*60*24) + delta_t.seconds + delta_t.microseconds/1000
+        delta_t_s = delta_t.days*(60*60*24) + delta_t.seconds + delta_t.microseconds/1000000
+
+        return abs(delta_t_s)
 
 
     def send_triggers(self, trigs_to_send):
