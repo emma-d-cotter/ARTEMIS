@@ -201,3 +201,18 @@ def send_triggers(sock, udp_IP, udp_port, trigs_to_send):
     bytes_sent = sock.sendto(msg, (udp_IP, udp_port))
 
     return bytes_sent
+
+
+def init_trigger_status():
+
+    zero_time = datetime(2000,1,1,0,0,0)
+
+    last_trigger = {}
+    unsent_trigs = {}
+    for inst in instruments:
+        last_trigger[inst] = zero_time
+        unsent_trigs[inst] = []
+
+    trigger_status = {'last_trigger': last_trigger, 'unsent_trigs': unsent_trigs}
+
+    return trigger_status
