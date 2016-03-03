@@ -1,17 +1,20 @@
 from datetime import datetime
+from .rules import send_save_triggers
 from . import config
 
 
 class Stage:
     """"""
 
-    def __init__(self, target_space):
+    def __init__(self, classifier, target_space):
+        self.classifier_queue = StageClassifierQueue(classifier, target_space, self)
         self.target_space = target_space
         self.data_queues = {}
         for stream in config.data_streams:
             self.data_queues[stream] = []
-        if stream == 'nims-simulator':
-            self.data_queues[stream] = {}
+        # NIMS data is grouped by target_id, so change to dict
+        self.data_queues['nims'] = {}
+        self.data_queues['nims-simulator'] = {}
 
     def processDataBeforeStage(self, stream, data):
         """Performs whatever preprocessing necessitated for data from a
@@ -61,7 +64,7 @@ class Stage:
             raise ValueError("Error adding data to stage. Stream {0} not \
                               defined in config file.".format(stream))
         stageIndices = self.processDataBeforeStage(stream, data)
-        if stream == 'nims-simulator':
+        if stream == 'nims' or stream == 'nims-simulator':
             for track_id in stageIndices:
                 if track_id not in self.data_queues[stream]:
                     self.data_queues[stream][track_id] = []
@@ -88,12 +91,15 @@ class Stage:
                 # trigger classification
 
 
+
 class StageClassifierQueue:
     """"""
 
-    def __init__(classifier, stage, prioritization='lifo'):
+    def __init__(classifier, target_space, stage, prioritization='lifo'):
         self.classifier = classifier
         self.stage = stage
+        self.target_space = target_space
+        self.prioritization = prioritization
         self.queue = []
 
     def addTargetToQueue(target):
@@ -102,12 +108,16 @@ class StageClassifierQueue:
 
         Last target in list will be considered front of queue (first to be popped).
         """
-        if prioritization == 'lifo':
+        if self.prioritization == 'lifo':
             self.queue.append(target)
+        else:
+            raise ValueError("Prioritization scheme {0} undefined for " \
+                    "StageClassifierQueue.".format(self.prioritization))
 
-    def fitClassifications():
-        """"""
+    def fitClassificationsAndTriggerSaves():
+        """Continuously classifies any targets inside of queue."""
         while True:
-            target = self.queue.pop()
-            X = target_space.classifier_features[target.data_indices['classifier']]
-            self.classifier.fit(X)
+            if len(self.queue) >= 1:
+                target = self.queue.pop()
+                X = target_space.classifier_features[target.data_indices['classifier']]
+                self.classifier.fit(X)  # rules.py send_save_triggers
