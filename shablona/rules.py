@@ -14,7 +14,8 @@ class SendTriggers:
         self.udp_IP = "localhost"
         self.udp_port = 61500
 
-    def send_save_triggers(self, target, classification):
+
+    def check_saving_rules(self, target, classification):
         """
         Rules to determine what, if any, instruments should save a recorded
         target. This script is intended to be modified to match data collection
@@ -57,6 +58,7 @@ class SendTriggers:
             # if there is any detection from NIMS, save all instruments
             else:
                 new_trigs = ['hydrophones', 'M3', 'blueview', 'cameras']
+
         else:
             # if the current speed is greater than the threshold
             if ADCP.speed > ADCP_threshold:
@@ -68,9 +70,9 @@ class SendTriggers:
             else:
                 new_trigs = []
 
-        if new_trigs
-
-        trigger_status = self.is_time_to_send(new_trigs)
+        # add any new triggers to trigger_status list
+        for inst in new_trigs:
+            self.trigger_status[unsent_trigs][inst].append(timestamp)
 
         return trigger_status
 
@@ -84,8 +86,9 @@ class SendTriggers:
         detection, and cameras and BlueView are added if the target passes within
         their range
         """
+        NIMS = target.getNIMS()
+        target_min_range = NIMS['min_range_m']
 
-        target_min_range = NIMS.min_range_m
         new_trigs = ['hydrophones', 'M3']
 
         if target_min_range > instrument_ranges['camera']:
@@ -97,20 +100,11 @@ class SendTriggers:
         return new_trigs
 
 
-    def is_time_to_send(self, new_trigs):
+    def send_triggers_if_ready(self):
         """
-        Add any new triggers to trigger_status, and determine what, if any save
-        triggers to send to LabView.
-
-        inputs:
-        socket - socket over which to send triggers to LabView
-        udp_IP - IP address over which to send triggers to LabView ("localhost")
-        udp_port - port over which to send triggers to LabView (61500)
-        new_triggs - new triggers to send (or wait to send)
-        trigger_status - dictionary containing unsent triggers and timestamp that
-                        last trigger was sent to each instrument
-
+        Determine what, if any save triggers to send to LabView, and send over UDP.
         """
+
         trigs_to_send = []
 
         # TODO: replace this with timestamp from actual target
@@ -118,25 +112,19 @@ class SendTriggers:
 
         unsent_trigs = self.trigger_status['unsent_trigs']
         last_trigger = self.trigger_status['last_trigger']
-        buffer_overlap = self.saving_parameters['buffer_overlap']
+        buffer_overlap = saving_parameters['buffer_overlap']
         min_time_between_targets = saving_parameters['min_time_between_targets']
         time_before_target = saving_parameters['time_before_target']
-
-        # add any new triggers to trigger_status list
-        for inst in new_trigs:
-            unsent_trigs[inst].append(timestamp)
 
         # for all triggers that have not been sent yet (unsent_trigs)
         for inst in unsent_trigs:
             if unsent_trigs[inst]:
                 # calculate elapsed time since the target was detected
-                time_since_detection =
-                        self.delta_t_in_seconds(timestamp, unsent_trigs[inst][0])
+                time_since_detection = self.delta_t_in_seconds(timestamp, unsent_trigs[inst][0])
                 print(time_since_detection, ' seconds since last ', inst, ' detection')
 
                 # calculate elapsed time since the last trigger for this instrument
-                time_since_last_trigger =
-                        self.delta_t_in_seconds(timestamp, last_trigger[inst])
+                time_since_last_trigger = self.delta_t_in_seconds(timestamp, last_trigger[inst])
                 print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
 
                 # Determine if more time than "wait_before_send" (from config) has elapsed
@@ -155,8 +143,7 @@ class SendTriggers:
                         # remove triggers that are within min_time_between_targets (i.e.
                         # already saved by this buffer)
                         for index, unsent_trig in enumerate(unsent_trigs[inst]):
-                            time_since_detection =
-                                    self.delta_t_in_seconds(last_trigger[inst], unsent_trigs[inst][index])
+                            time_since_detection = self.delta_t_in_seconds(last_trigger[inst], unsent_trigs[inst][index])
 
                             if time_since_detection < min_time_between_targets:
                                 del unsent_trigs[inst][index]
@@ -166,10 +153,7 @@ class SendTriggers:
             print('sending triggers for ', trigs_to_send)
             self.send_triggers(trigs_to_send)
 
-        self.trigger_status =
-                {'unsent_trigs': unsent_trigs, 'last_trigger': last_trigger}
-
-        return trigs_to_send, trigger_status
+        self.trigger_status = {'unsent_trigs': unsent_trigs, 'last_trigger': last_trigger}
 
 
     def delta_t_in_seconds(self, datetime1, datetime2):
