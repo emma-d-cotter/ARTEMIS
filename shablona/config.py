@@ -35,7 +35,8 @@ instrument_ranges = {'camera': 8,
 					 'm3': 50}
 
 data_streams = ['adcp', 'camera', 'pamguard', 'nims', 'nims-simulator']
-data_streams_groupby = {'nims': 'track_id', 'nims-simulator': 'track_id'}
+data_streams_classifier_triggers = {'nims_max_pings': 10, 'nims_max_time': 1000,
+									'nims-simulator_max_pings': 10, 'nims-simulator_max_time': 1000}
 
 # This supplies the order and contents for classification features
 classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_day',

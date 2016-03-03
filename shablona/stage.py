@@ -68,33 +68,46 @@ class Stage:
                 self.data_queues[stream][track_id].append(stageIndices[track_id])
         else:
             self.data_queues[stream].append(stageIndices)
-        target = self.streamDataToTarget(stream, data)
-        self.initiateClassificationIfEligible(stream)
 
-    def streamDataToTarget(self, stream, data):
+    def createOrUpdateTarget(self, stream, key):
         """Appends or creates a Target instance based on current staged data."""
         # TODO: Ask Emma "how to tell that repeating data is attached to same target?"
         # For NIMS, we know target_id is the same. PAMGuard? Start and end time?
-        pass
+        self.data_queues[stream]
 
-    def initiateClassificationIfEligible(self, stream):
+    def triggerClassificationIfEligible(self):
         """Calls classifier.fit() if eligible given specified rules."""
         # TODO: Vague documentation, any way to be more specific?
-        # TODO: Ask Emma about what things should trigger a classification.
-        if stream is 'adcp':
-            pass
-        elif stream is 'camera':
-            pass
-        elif stream is 'pamguard':
-            pass
-        elif stream is 'nims':
-            pass
-        elif stream is 'nims-simulator':
-            pass
-        elif stream in config.data_streams:
-            pass
-        else:
-            # TODO: Failing when data stream mismatches may be too extreme. We
-            # want to keep the data and potentially fail more softly.
-            raise ValueError("Error processing data for stage. Stream {0} not \
-                              defined in config file.".format(stream))
+        for track_id in self.data_queues['nims-simulator']:
+            if len(self.data_queues['nims-simulator'][track_id]) >=
+                    config.data_streams_classifier_triggers['nims-simulator_max_pings']:
+                # create/update Target
+                if self.target_space.input_data['nims-simulator']
+                # remove from stage
+                self.data_queues['nims-simulator'][track_id] = []
+                # trigger classification
+
+
+class StageClassifierQueue:
+    """"""
+
+    def __init__(classifier, stage, prioritization='lifo'):
+        self.classifier = classifier
+        self.stage = stage
+        self.queue = []
+
+    def addTargetToQueue(target):
+        """Adds a target object to the 'to be classified' queue using the
+        prioritization scheme defined for the class.
+
+        Last target in list will be considered front of queue (first to be popped).
+        """
+        if prioritization == 'lifo':
+            self.queue.append(target)
+
+    def fitClassifications():
+        """"""
+        while True:
+            target = self.queue.pop()
+            X = target_space.classifier_features[target.data_indices['classifier']]
+            self.classifier.fit(X)
