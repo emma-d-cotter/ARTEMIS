@@ -133,9 +133,9 @@ class SendTriggers:
                 # has elapsed since detection.
                 if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
 
-                    # Determine if sufficient time has passed since last trigger was
-                    # sent to inst to create an overlap of "buffer_overlap" (from
-                    # config) in the saved data
+                    # Determine if sufficient time has passed since last trigger
+                    # was sent to inst to create an overlap of "buffer_overlap"
+                    # (from config) in the saved data
                     if time_since_last_trigger >= (
                         instrument_buffer_sizes[inst] - buffer_overlap):
 
@@ -143,8 +143,8 @@ class SendTriggers:
                         trigs_to_send.append(inst)
                         last_trigger[inst] = timestamp
 
-                        # remove triggers that are within min_time_between_targets (i.e.
-                        # already saved by this buffer)
+                        # remove triggers that are within min_time_between_targets
+                        # (i.e. already saved by this buffer)
                         for index, unsent_trig in enumerate(unsent_trigs[inst]):
                             time_since_detection = self.delta_t_in_seconds(
                                 last_trigger[inst], unsent_trigs[inst][index])
@@ -157,7 +157,10 @@ class SendTriggers:
             print('sending triggers for ', trigs_to_send)
             self.send_triggers(trigs_to_send)
 
-        self.trigger_status = {'unsent_trigs': unsent_trigs, 'last_trigger': last_trigger}
+        self.trigger_status = {
+                               'unsent_trigs': unsent_trigs,
+                               'last_trigger': last_trigger
+                               }
 
 
     def delta_t_in_seconds(self, datetime1, datetime2):
@@ -166,7 +169,9 @@ class SendTriggers:
         (returns absolute value, so order of dates is insignifigant)
         """
         delta_t = datetime1 - datetime2
-        delta_t_s = delta_t.days*(60*60*24) + delta_t.seconds + delta_t.microseconds/1000000
+        days_s = delta_t.days*(86400)
+        microseconds_s = delta_t.microseconds/1000000
+        delta_t_s = days_s + delta_t.seconds + microseconds_s
 
         return abs(delta_t_s)
 
@@ -187,8 +192,9 @@ class SendTriggers:
 
         Data is sent in the following format:
             "AAAA 1 1 1 1 1 ZZZZ" where "AAAA" and "ZZZZZ" are always the header
-            and footer, and the "1" values are zero or 1 if that instrument should
-            offload data (in the order of the instruments list from config)
+            and footer, and the "1" values are zero or 1 if that instrument
+            should offload data (in the order of the instruments list from
+            config)
         """
 
 
@@ -218,6 +224,9 @@ class SendTriggers:
             last_trigger[inst] = zero_time
             unsent_trigs[inst] = []
 
-        trigger_status = {'last_trigger': last_trigger, 'unsent_trigs': unsent_trigs}
+        trigger_status = {
+                          'last_trigger': last_trigger,
+                          'unsent_trigs': unsent_trigs
+                          }
 
         return trigger_status
