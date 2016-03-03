@@ -1,5 +1,5 @@
 import numpy as np
-
+from datetime import datetime
 
 # name of site of current deployment. this will be added as an attribute to
 # classified targets. site_name_auto indicates that a classification was
@@ -10,10 +10,30 @@ site_name = ['MSL']
 instruments = ['adcp', 'camera', 'blueview', 'm3', 'hydrophones']
 
 # Buffer size in seconds
-instrument_buffer_sizes = {'camera': 15, 'blueview': 15, 'm3':15, 'hydrophones': 15}
+instrument_buffer_sizes = {'adcp': 0,
+						   'camera': 15,
+						   'blueview': 15,
+						   'm3':15,
+						   'hydrophones': 15}
+
+# Timing parameters for saving:
+# buffer_overlap: number of seconds to overlap buffers in the event
+#                 of consecutive targets
+# min_time_between_targets: minimum time between targets to send a separate
+#                           trigger signal (i.e. if two targets are closer
+#                           together than this value, they will be considered
+#                           to be saved in the same buffer. Otherwise, two
+#                           separate triggers will be sent)
+# wait_before_send: number of seconds to wait before sending trigger
+#                   signal to LabView after detection
+saving_parameters = {'buffer_overlap': 2,
+					  'min_time_between_targets': 5,
+					  'wait_before_send': 10}
 
 # Instrument ranges
-instrument_ranges = {'camera': 8, 'blueview': 10, 'm3': 50}
+instrument_ranges = {'camera': 8,
+					 'blueview': 10,
+					 'm3': 50}
 
 data_streams = ['adcp', 'camera', 'pamguard', 'nims', 'nims-simulator']
 data_streams_groupby = {'nims': 'track_id', 'nims-simulator': 'track_id'}
