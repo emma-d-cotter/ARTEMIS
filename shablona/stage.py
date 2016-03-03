@@ -69,11 +69,11 @@ class Stage:
         else:
             self.data_queues[stream].append(stageIndices)
 
-    def streamDataToTarget(self, stream, data):
+    def createOrUpdateTarget(self, stream, key):
         """Appends or creates a Target instance based on current staged data."""
         # TODO: Ask Emma "how to tell that repeating data is attached to same target?"
         # For NIMS, we know target_id is the same. PAMGuard? Start and end time?
-        pass
+        self.data_queues[stream]
 
     def triggerClassificationIfEligible(self):
         """Calls classifier.fit() if eligible given specified rules."""
@@ -82,7 +82,32 @@ class Stage:
             if len(self.data_queues['nims-simulator'][track_id]) >=
                     config.data_streams_classifier_triggers['nims-simulator_max_pings']:
                 # create/update Target
-                if self.target_space.input_data
+                if self.target_space.input_data['nims-simulator']
                 # remove from stage
                 self.data_queues['nims-simulator'][track_id] = []
                 # trigger classification
+
+
+class StageClassifierQueue:
+    """"""
+
+    def __init__(classifier, stage, prioritization='lifo'):
+        self.classifier = classifier
+        self.stage = stage
+        self.queue = []
+
+    def addTargetToQueue(target):
+        """Adds a target object to the 'to be classified' queue using the
+        prioritization scheme defined for the class.
+
+        Last target in list will be considered front of queue (first to be popped).
+        """
+        if prioritization == 'lifo':
+            self.queue.append(target)
+
+    def fitClassifications():
+        """"""
+        while True:
+            target = self.queue.pop()
+            X = target_space.classifier_features[target.data_indices['classifier']]
+            self.classifier.fit(X)
