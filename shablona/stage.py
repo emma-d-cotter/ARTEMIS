@@ -68,8 +68,6 @@ class Stage:
                 self.data_queues[stream][track_id].append(stageIndices[track_id])
         else:
             self.data_queues[stream].append(stageIndices)
-        target = self.streamDataToTarget(stream, data)
-        self.initiateClassificationIfEligible(stream)
 
     def streamDataToTarget(self, stream, data):
         """Appends or creates a Target instance based on current staged data."""
@@ -77,24 +75,14 @@ class Stage:
         # For NIMS, we know target_id is the same. PAMGuard? Start and end time?
         pass
 
-    def initiateClassificationIfEligible(self, stream):
+    def triggerClassificationIfEligible(self):
         """Calls classifier.fit() if eligible given specified rules."""
         # TODO: Vague documentation, any way to be more specific?
-        # TODO: Ask Emma about what things should trigger a classification.
-        if stream is 'adcp':
-            pass
-        elif stream is 'camera':
-            pass
-        elif stream is 'pamguard':
-            pass
-        elif stream is 'nims':
-            pass
-        elif stream is 'nims-simulator':
-            pass
-        elif stream in config.data_streams:
-            pass
-        else:
-            # TODO: Failing when data stream mismatches may be too extreme. We
-            # want to keep the data and potentially fail more softly.
-            raise ValueError("Error processing data for stage. Stream {0} not \
-                              defined in config file.".format(stream))
+        for track_id in self.data_queues['nims-simulator']:
+            if len(self.data_queues['nims-simulator'][track_id]) >=
+                    config.data_streams_classifier_triggers['nims-simulator_max_pings']:
+                # create/update Target
+                if self.target_space.input_data
+                # remove from stage
+                self.data_queues['nims-simulator'][track_id] = []
+                # trigger classification
