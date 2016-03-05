@@ -25,9 +25,9 @@ def ADCP_read(stage_instance, udp_IP = "", udp_port = 61557, buff_size = 1024, t
     currents = []
     headers = []
     while True:
-
         # read data. Continue reading if timeout error, attempt to reconnect if
         # there is a different socket error.
+
         try:
             data, addr = sock.recvfrom(buff_size)
         except socket.timeout:

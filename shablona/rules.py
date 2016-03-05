@@ -74,8 +74,6 @@ class SendTriggers:
         for inst in new_trigs:
             self.trigger_status[unsent_trigs][inst].append(timestamp)
 
-        return trigger_status
-
 
     def evaluate_target_range(self, target):
         """
