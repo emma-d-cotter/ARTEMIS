@@ -1,5 +1,5 @@
 from datetime import datetime
-from .rules import send_save_triggers
+from .rules import SendTriggers
 from . import config
 
 
@@ -82,13 +82,12 @@ class Stage:
         """Calls classifier.fit() if eligible given specified rules."""
         # TODO: Vague documentation, any way to be more specific?
         for track_id in self.data_queues['nims-simulator']:
-            if len(self.data_queues['nims-simulator'][track_id]) >=
-                    config.data_streams_classifier_triggers['nims-simulator_max_pings']:
+            if len(self.data_queues['nims-simulator'][track_id]) >= config.data_streams_classifier_triggers['nims-simulator_max_pings']:
                 # create/update Target
-                if self.target_space.input_data['nims-simulator']
-                # remove from stage
-                self.data_queues['nims-simulator'][track_id] = []
-                # trigger classification
+                if self.target_space.input_data['nims-simulator']:
+                    # remove from stage
+                    self.data_queues['nims-simulator'][track_id] = []
+                    # trigger classification
 
 
 
