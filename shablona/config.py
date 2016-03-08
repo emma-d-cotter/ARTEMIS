@@ -1,4 +1,5 @@
 import numpy as np
+from math import pi
 from datetime import datetime
 
 # name of site of current deployment. this will be added as an attribute to
@@ -82,3 +83,7 @@ classifications = {
 	2: "Small Fish",
 	3: "Outliers"
 }
+
+AMP_heading = pi/2 # heading of AMP (radians from North)
+M3_swath = [0, 120]
+M3_avgeraging_time = 5 # number of seconds over which to calculate target velocity
