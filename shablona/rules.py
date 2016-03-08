@@ -46,9 +46,9 @@ class SendTriggers:
         """
 
         classes_to_save = [1,2,3]
-        PAMGuard = target.getPamGuard()
-        ADCP = target.getADCP()
-        NIMS = target.getNIMS()
+        PAMGuard = target.get_entry('pamguard'))
+        ADCP = target.get_entry('adcp')
+        NIMS = target.get_entry('nims')
 
         # if there is a marine mammal detection from  PAMGuard
         if PAMGuard != None:
@@ -84,7 +84,7 @@ class SendTriggers:
         detection, and cameras and BlueView are added if the target passes within
         their range
         """
-        NIMS = target.getNIMS()
+        NIMS = target.get_entry('nims')
         target_min_range = NIMS['min_range_m']
 
         new_trigs = ['hydrophones', 'M3']

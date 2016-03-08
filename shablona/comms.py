@@ -27,7 +27,7 @@ class InstrumentComms:
 
     def check_status(self):
         """
-        Returns list of booleans indicating which fuctions are running
+        Returns list of booleans indicating which functions are running
         """
         status = []
         for i, thread in enumerate(self.threads):

@@ -3,6 +3,7 @@ from scipy import stats
 import os.path
 import csv
 from datetime import datetime
+import pprint
 
 from sklearn.base import ClassifierMixin
 from sklearn.neighbors.base import NeighborsBase, RadiusNeighborsMixin, \
@@ -13,73 +14,21 @@ from sklearn.utils.extmath import weighted_mode
 from . import config
 
 
-def _within_interval(x, min, max):
-    """Utility function returns boolean if in interval (inclusive, both sides)."""
-    return min <= x and x <= max
-
 def _within_interval(x, interval):
     """Utility function returns boolean if in interval (inclusive, both sides)."""
-    return _within_range(x, interval[0], interval[1])
+    if len(interval) == 2:
+        return interval[0] <= x and x <= interval[1]
+    else:
+        raise ValueError("Invalid interval parameter '{0}'. Expected to be tuple "
+                "or list of length 2.".format(interval))
 
-def _check_background_coverage(hyperspaces):
-    """Checks that every feature defined in the background hyperspace
-    used for outliers are defined everywhere between negative infinity
-    and infinity. Also checks that background defined on at least one
-    feature.
-
-    Throws ValueError if hyperspace fails, returns nothing otherwise.
-
-    Parameters
-    ----------
-    hyperspaces : list of dicts
-        List of rules, where each rule is a dictionary with classifier
-        features as keys and a tuple (min, max) as the value.
-    """
-    # TODO: Add comparison of classes to those defined in hyperspace
-    num_features_with_full_background = 0
-    for feature in config.classifier_features:
-        ranges = set()
-        for rule in config.background_hyperspaces:
-            rule_min = rule[feature][0]
-            rule_max = rule[feature][1]
-            for rng in ranges:
-                #    *----*         original range (rng)
-                #  |--------|       rule engulfs orig range
-                if rule_min <= rng[0] and rng[1] <= rule_max:
-                    rng[0] = rule_min
-                    rng[1] = rule_max
-                #    *----*         original range (rng)
-                #  |---|            rule overlaps, but to minimum side
-                elif rule_min <= rng[0]:
-                    rng[0] = rule_min
-                #    *----*         original range (rng)
-                #        |---|      rule overlaps, but to maximum side
-                elif rng[1] <= rule_max:
-                    rng[1] = rule_max
-                #    *----*         original range (rng)
-                #      |-|          original range engulfs rule
-                elif rng[0] <= rule_min and rule_max <= rng[1]:
-                    pass
-                #    *----*         original range (rng)
-                # |-|               rule completely outside of orig range
-                else:
-                    ranges.add( (rule_min,rule_max) )
-        if len(ranges) > 1:
-            raise ValueError("Defined background hyperspaces fail to span all \
-                of {0} feature. Ranges covered: {1}".format(feature, ranges))
-        num_features_with_full_background += 1
-    if num_features_with_full_background == 0:
-        raise ValueError("Defined background hyperspaces fail to cover any of \
-                the classifier features, meaning outliers could go unclassified.")
-
-def _scale_axis(value, axis_name):
+def _scale_axis(value, axis_name, axis_bounds=config.classifier_axis_bounds):
     """Retrieves classifier axis bounds and scales value accordingly."""
     try:
-        min_bound = config.classifier_axis_bounds[axis_name][0]
-        max_bound = config.classifier_axis_bounds[axis_name][1]
+        min_bound = axis_bounds[axis_name][0]
+        max_bound = axis_bounds[axis_name][1]
     except KeyError:
         raise ValueError("Unable to scale axis {0}.".format(axis_name))
-
     return (value - min_bound) / (max_bound - min_bound)
 
 def classification_weights(neigh_dist, neigh_ind, target_space):
@@ -122,10 +71,108 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
     return np.array(weights)
 
 class BackgroundClassifier():
-    """"""
-    def fit(self, hyperspaces=config.background_hyperspaces):
-        """"""
-        self.hyperspaces = _check_background_coverage(hyperspaces)
+    """Classifier implementing priority-based background hyperspace rules to be
+    used when the radius neighbors classifier finds no neighbors in loaded data.
+
+    Parameters
+    ----------
+    hyperspaces : list of dicts, optional
+        Defines hyperspaces (rules) for which a classification is assumed, list
+          in order of descending priority. Each feature defined in hyperspaces
+          must be defined everywhere between negative infinity and infinity.
+          Must also be defined for at least one feature and have valid
+          classification for each rule/hyperspace. Pulled from
+          config.background_hyperspaces object if blank.
+    features : list, optional
+        list of features to be used in classifier. Pulled from
+          config.classifier_features if blank.
+    classifications : dict, optional
+        dict of classifications, with keys integer and values string. Pulled from
+          config.classifications if blank.
+    """
+    def __init__(self,
+                 hyperspaces=config.background_hyperspaces,
+                 features=config.classifier_features,
+                 classifications=config.classifications):
+        self.hyperspaces = hyperspaces
+        self.features = features
+        self.classifications = classifications
+
+    def _check_background_coverage(hyperspaces, features, classifications):
+        """Checks that every feature defined in the background hyperspace
+        used for outliers are defined everywhere between negative infinity
+        and infinity. Also checks that background defined on at least one
+        feature, classification is defined for each rule, and each classification
+        is a valid classification.
+
+        Throws ValueError if hyperspace fails, returns hyperspace otherwise.
+
+        Parameters
+        ----------
+        hyperspaces : list of dicts
+            List of rules, where each rule is a dictionary with classifier
+            features as keys and a tuple (min, max) as the value.
+        """
+        for rule in hyperspaces:
+            if 'classification' not in rule:
+                raise ValueError("Invalid background hyperspace. There exists a " \
+                        "rule without a classification key.")
+            if (rule['classification'] not in classifications or
+                    rule['classification'] not in classifications.values():
+                raise ValueError("Invalid classification {0} in background " \
+                        "hyperspace. Valid classifications are: {1} or {2}".format(
+                        rule['classification'], list(classifications.keys()),
+                        list(classifications.values())))
+
+        num_features_with_full_background = 0
+        for feature in features:
+            ranges = set()
+            for rule in hyperspaces:
+                if rule.get(feature) == None: continue  # skips features undefined in rule
+                rule_min = rule[feature][0]
+                rule_max = rule[feature][1]
+                for rng in ranges:
+                    #    *----*         original range (rng)
+                    #  |--------|       rule engulfs orig range
+                    if rule_min <= rng[0] and rng[1] <= rule_max:
+                        rng[0] = rule_min
+                        rng[1] = rule_max
+                    #    *----*         original range (rng)
+                    #  |---|            rule overlaps, but to minimum side
+                    elif rule_min <= rng[0]:
+                        rng[0] = rule_min
+                    #    *----*         original range (rng)
+                    #        |---|      rule overlaps, but to maximum side
+                    elif rng[1] <= rule_max:
+                        rng[1] = rule_max
+                    #    *----*         original range (rng)
+                    #      |-|          original range engulfs rule
+                    elif rng[0] <= rule_min and rule_max <= rng[1]:
+                        pass
+                    #    *----*         original range (rng)
+                    # |-|               rule completely outside of orig range
+                    else:
+                        ranges.add( (rule_min,rule_max) )
+            if len(ranges) > 1:
+                raise ValueError("Defined background hyperspaces fail to span all \
+                    of {0} feature. Ranges covered: {1}".format(feature, ranges))
+            num_features_with_full_background += 1
+        if num_features_with_full_background == 0:
+            raise ValueError("Defined background hyperspaces fail to cover any of \
+                    the classifier features, meaning outliers could go unclassified.")
+
+        return hyperspaces
+
+    def fit(self,
+            hyperspaces=self.background_hyperspaces,
+            features=self.classifier_features,
+            classifications=self.classifications):
+        """Fits background classifier after checking validity of defined hyperspace."""
+        self.hyperspaces = _check_background_coverage(hyperspaces, features,
+                classifications)
+        # Copying parameters just in case they changed, mirrors sklearn classifier.fit()
+        self.features = features
+        self.classifications = classifications
 
     def predict(self, X):
         """Predict the class labels for the provided data
@@ -135,16 +182,16 @@ class BackgroundClassifier():
             Test samples.
         Returns
         -------
-        y : array of shape [n_samples] or [n_samples, n_outputs]
-            Class labels for each data sample.
+        y : array of shape [n_samples]
+            Class labels for each data sample, along with classification info
         """
         for rule in self.hyperspaces:
-            for i, feature in enumerate(config.classifier_features):
+            for i, feature in enumerate(self.classifier_features):
                 if feature in rule and not _within_interval(X[i], rule[feature]):
                     break
             else:
                 # Success, none of the features in rule fail
-                return rule['classification']
+                return rule.get('classification')
         # Failure for all rules, should be caught by _check_background_coverage
         raise ValueError("No background classification could be found for \
                 {0}.".format(X))
@@ -213,7 +260,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
     http://en.wikipedia.org/wiki/K-nearest_neighbor_algorithm
     """
 
-    def __init__(self, weights, radius=1.0,
+    def __init__(self, weights, target_space, radius=1.0,
                  algorithm='auto', leaf_size=30, p=2, metric='minkowski',
                  outliers=None, metric_params=None, **kwargs):
         self._init_params(radius=radius,
@@ -234,7 +281,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
             Test samples.
         Returns
         -------
-        y : array of shape [n_samples] or [n_samples, n_outputs]
+        y : array of shape [n_samples]
             Class labels for each data sample.
         """
         X = check_array(X, accept_sparse='csr')
@@ -260,7 +307,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
                              'or consider removing them from your dataset.'
                              % outliers)
 
-        weights = self.weights(dist=neigh_dist, ind=neigh_ind,
+        weights = self.weight_function(neigh_dist=neigh_dist, neigh_ind=neigh_ind,
                                target_space=self.target_space)
 
         y_pred = np.empty((n_samples, n_outputs), dtype=classes_[0].dtype)
@@ -280,9 +327,9 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
 
             y_pred[inliers, k] = classes_k.take(mode)
 
-        # TODO: Replace with use of the BackgroundClassifier.fit()
         if outliers:
-            y_pred[outliers, :] = self.outlier_label
+            for outlier in outliers:
+                y_pred[outlier, 0] = self.outlier_function.predict(X[outlier])
 
         if not self.outputs_2d_:
             y_pred = y_pred.ravel()
