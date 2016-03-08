@@ -28,8 +28,8 @@ def get_tracks(stage_instance, buffer):
         msg, buffer = unpacker("=%ds" % len(buffer), buffer)
         nims_data = json.loads(msg[0].decode("utf-8"))
 
-        print('ping no: ', nims_data['ping_num'])
-        print(nims_data['num_tracks'], ' tracks detected')
+        #print('ping no: ', nims_data['ping_num'])
+        #print(nims_data['num_tracks'], ' tracks detected')
 
         # TODO - ask NIMS to send timestamp with ping number
         timestamp = datetime.datetime.utcnow()

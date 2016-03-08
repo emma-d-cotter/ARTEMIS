@@ -12,7 +12,7 @@ class InstrumentComms:
     def __init__(self, stage_instance):
         #TODO: Can make this check what streams are present, and start those
         # functions
-        comms_functions = [read_tracks, PAMGuard_read, ADCP_read]
+        comms_functions = [read_tracks] #, PAMGuard_read, ADCP_read]
         self.threads = []
         for fun in comms_functions:
                 self.threads.append(
