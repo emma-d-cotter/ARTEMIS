@@ -82,7 +82,7 @@ class Stage:
                 # Data not captured in any other Targets, create a new one
                 return Target(target_space=self.target_space,
                               source=self.source,
-                              date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                              date=self.target_space.get_entry_by_index('pamguard', pamguard)['timestamp'],
                               indices={'pamguard': pamguard, 'adcp': adcp})
         elif nims != [] and nims[1] != []:
             for target in self.recent_targets:
@@ -91,15 +91,23 @@ class Stage:
                     updated_target = target.update_entry('nims', nims[1])
                     return updated_target
                 else:
+                    latest_timestamp = max(self.target_space.get_entry_by_index('pamguard', pamguard),
+                                           self.target_space.get_entry_by_index('nims', nims[1][len(nims[1])-1]))
                     if len(nims[1]) == 1:
                         # We don't have existing targets and only one index in queue
                         return Target(target_space=self.target_space,
                                       source=self.source,
-                                      date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                                      date=latest_timestamp,
                                       indices={'nims': nims[1][0], 'pamguard': pamguard, 'adcp': adcp})
                     elif len(nims[1]) > 1:
                         # We don't have existing targets, but multiple indices in queue
-
+                        combined_entry = self.target_space.combine_entries('nims', nims[1])
+                        self.target_space.tables['nims'].append(combined_entry)
+                        index = len(self.target_space.tables['nims']) - 1
+                        return Target(target_space=self.target_space,
+                                      source=self.source,
+                                      date=latest_timestamp,
+                                      indices={'nims': index, 'pamguard': pamguard, 'adcp': adcp})
 
         # Adds itself to recent_targets list
         self.recent_targets.append(target)
@@ -110,8 +118,9 @@ class Stage:
         # Only try to create new target in potential pamguard only case
         if self.data_queues['pamguard'] != []:
             pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.entryByIndex('pamguard',
-                    self.data_queues['pamguard']).get('timestamp'))
+                    self.target_space.get_entry_by_index('pamguard',
+                    self.data_queues['pamguard']).get('timestamp') >= datetime.timedelta(
+                    seconds=config.data_streams_classifier_triggers['pamguard_max_time']))
             if pamguard_exceeds_max_time:
                 target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
@@ -124,9 +133,10 @@ class Stage:
             # If max_pings or max_time, create/update Target
             ping_count = len(self.data_queues['nims'][track_id])
             exceeds_max_pings = (ping_count >=
-                    config.data_streams_classifier_triggers['nims'])
+                    config.data_streams_classifier_triggers['nims_max_pings'])
             exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.data_queues['nims'][track_id][ping_count - 1])
+                    self.target_space.get_entry_by_index(self.data_queues['nims'][track_id][-1])
+                    >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time'])
             if exceeds_max_pings or exceeds_max_time:
                 target = createOrUpdateTarget(nims=(track_id,self.data_queues['nims'][track_id]),
                                               pamguard=self.data_queues['pamguard'],
@@ -134,6 +144,12 @@ class Stage:
                 self.data_queues['nims'][track_id] = []
                 self.classifier_queue.addTargetToQueue(target)
 
+        max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
+                       config.data_streams_classifier_triggers['nims_max_time'])
+        for recent_target in self.recent_targets:
+            if datetime.datetime.utcnow() - recent_target.date >= max_time:
+                # Remove recent target from list
+                self.recent_targets.remove(x)
 
 class StageClassifierQueue:
     """"""
