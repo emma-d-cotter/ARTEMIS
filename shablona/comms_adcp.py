@@ -100,7 +100,7 @@ def process_ADCP(stage_instance, currents, header):
     Header = header data from ADCP
 
     Outputs:
-    Heading = velocity direction (in radians from magnetic north)
+    Heading = velocity direction (in radians from north)
     Speed = magintude of horizontal velocity (East and North)
     Timestamp = end of burst in unix time format
     """
