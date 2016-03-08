@@ -182,7 +182,7 @@ class BackgroundClassifier():
             Test samples.
         Returns
         -------
-        y : array of shape [n_samples, 3]
+        y : array of shape [n_samples]
             Class labels for each data sample, along with classification info
         """
         for rule in self.hyperspaces:
@@ -191,7 +191,7 @@ class BackgroundClassifier():
                     break
             else:
                 # Success, none of the features in rule fail
-                return rule.get('classification'), rule.get(name)
+                return rule.get('classification')
         # Failure for all rules, should be caught by _check_background_coverage
         raise ValueError("No background classification could be found for \
                 {0}.".format(X))
@@ -281,7 +281,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
             Test samples.
         Returns
         -------
-        y : array of shape [n_samples] or [n_samples, n_outputs]
+        y : array of shape [n_samples]
             Class labels for each data sample.
         """
         X = check_array(X, accept_sparse='csr')

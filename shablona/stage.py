@@ -63,7 +63,7 @@ class Stage:
                               defined in config file.".format(stream))
         stage_indices = self.processDataBeforeStage(stream, data)
         if stream == 'nims':  # indexed
-            for track_id in istage_indices:
+            for track_id in stage_indices:
                 if track_id not in self.data_queues[stream]:
                     self.data_queues[stream][track_id] = []
                 self.data_queues[stream][track_id].append(stage_indices[track_id])
