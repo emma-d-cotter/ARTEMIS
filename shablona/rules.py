@@ -14,7 +14,8 @@ class SendTriggers:
         self.udp_IP = "localhost"
         self.udp_port = 61500
 
-    def send_save_triggers(self, target, classification):
+
+    def check_saving_rules(self, target, classification):
         """
         Rules to determine what, if any, instruments should save a recorded
         target. This script is intended to be modified to match data collection
@@ -45,9 +46,9 @@ class SendTriggers:
         """
 
         classes_to_save = [1,2,3]
-        PAMGuard = target.getPamGuard()
-        ADCP = target.getADCP()
-        NIMS = target.getNIMS()
+        PAMGuard = target.get_entry('pamguard'))
+        ADCP = target.get_entry('adcp')
+        NIMS = target.get_entry('nims')
 
         # if there is a marine mammal detection from  PAMGuard
         if PAMGuard != None:
@@ -57,6 +58,7 @@ class SendTriggers:
             # if there is any detection from NIMS, save all instruments
             else:
                 new_trigs = ['hydrophones', 'M3', 'blueview', 'cameras']
+
         else:
             # if the current speed is greater than the threshold
             if ADCP.speed > ADCP_threshold:
@@ -68,11 +70,9 @@ class SendTriggers:
             else:
                 new_trigs = []
 
-        if new_trigs
-
-        trigger_status = self.is_time_to_send(new_trigs)
-
-        return trigger_status
+        # add any new triggers to trigger_status list
+        for inst in new_trigs:
+            self.trigger_status[unsent_trigs][inst].append(timestamp)
 
 
     def evaluate_target_range(self, target):
@@ -84,8 +84,9 @@ class SendTriggers:
         detection, and cameras and BlueView are added if the target passes within
         their range
         """
+        NIMS = target.get_entry('nims')
+        target_min_range = NIMS['min_range_m']
 
-        target_min_range = NIMS.min_range_m
         new_trigs = ['hydrophones', 'M3']
 
         if target_min_range > instrument_ranges['camera']:
@@ -97,20 +98,11 @@ class SendTriggers:
         return new_trigs
 
 
-    def is_time_to_send(self, new_trigs):
+    def send_triggers_if_ready(self):
         """
-        Add any new triggers to trigger_status, and determine what, if any save
-        triggers to send to LabView.
-
-        inputs:
-        socket - socket over which to send triggers to LabView
-        udp_IP - IP address over which to send triggers to LabView ("localhost")
-        udp_port - port over which to send triggers to LabView (61500)
-        new_triggs - new triggers to send (or wait to send)
-        trigger_status - dictionary containing unsent triggers and timestamp that
-                        last trigger was sent to each instrument
-
+        Determine what, if any save triggers to send to LabView, and send over UDP.
         """
+
         trigs_to_send = []
 
         # TODO: replace this with timestamp from actual target
@@ -118,45 +110,42 @@ class SendTriggers:
 
         unsent_trigs = self.trigger_status['unsent_trigs']
         last_trigger = self.trigger_status['last_trigger']
-        buffer_overlap = self.saving_parameters['buffer_overlap']
+        buffer_overlap = saving_parameters['buffer_overlap']
         min_time_between_targets = saving_parameters['min_time_between_targets']
         time_before_target = saving_parameters['time_before_target']
-
-        # add any new triggers to trigger_status list
-        for inst in new_trigs:
-            unsent_trigs[inst].append(timestamp)
 
         # for all triggers that have not been sent yet (unsent_trigs)
         for inst in unsent_trigs:
             if unsent_trigs[inst]:
                 # calculate elapsed time since the target was detected
-                time_since_detection =
-                        self.delta_t_in_seconds(timestamp, unsent_trigs[inst][0])
+                time_since_detection = self.delta_t_in_seconds(
+                    timestamp, unsent_trigs[inst][0])
                 print(time_since_detection, ' seconds since last ', inst, ' detection')
 
                 # calculate elapsed time since the last trigger for this instrument
-                time_since_last_trigger =
-                        self.delta_t_in_seconds(timestamp, last_trigger[inst])
+                time_since_last_trigger = self.delta_t_in_seconds(
+                    timestamp, last_trigger[inst])
                 print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
 
-                # Determine if more time than "wait_before_send" (from config) has elapsed
-                # since detection.
+                # Determine if more time than "wait_before_send" (from config)
+                # has elapsed since detection.
                 if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
 
-                    # Determine if sufficient time has passed since last trigger was
-                    # sent to inst to create an overlap of "buffer_overlap" (from
-                    # config) in the saved data
-                    if time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap):
+                    # Determine if sufficient time has passed since last trigger
+                    # was sent to inst to create an overlap of "buffer_overlap"
+                    # (from config) in the saved data
+                    if time_since_last_trigger >= (
+                        instrument_buffer_sizes[inst] - buffer_overlap):
 
                         del unsent_trigs[inst][0]
                         trigs_to_send.append(inst)
                         last_trigger[inst] = timestamp
 
-                        # remove triggers that are within min_time_between_targets (i.e.
-                        # already saved by this buffer)
+                        # remove triggers that are within min_time_between_targets
+                        # (i.e. already saved by this buffer)
                         for index, unsent_trig in enumerate(unsent_trigs[inst]):
-                            time_since_detection =
-                                    self.delta_t_in_seconds(last_trigger[inst], unsent_trigs[inst][index])
+                            time_since_detection = self.delta_t_in_seconds(
+                                last_trigger[inst], unsent_trigs[inst][index])
 
                             if time_since_detection < min_time_between_targets:
                                 del unsent_trigs[inst][index]
@@ -166,18 +155,23 @@ class SendTriggers:
             print('sending triggers for ', trigs_to_send)
             self.send_triggers(trigs_to_send)
 
-        self.trigger_status =
-                {'unsent_trigs': unsent_trigs, 'last_trigger': last_trigger}
-
-        return trigs_to_send, trigger_status
+        self.trigger_status = {
+                               'unsent_trigs': unsent_trigs,
+                               'last_trigger': last_trigger
+                               }
 
 
     def delta_t_in_seconds(self, datetime1, datetime2):
         """
         calculate delta t in seconds between two datetime objects
+        (returns absolute value, so order of dates is insignifigant)
         """
         delta_t = datetime1 - datetime2
-        return delta_t.days*(60*60*24) + delta_t.seconds + delta_t.microseconds/1000
+        days_s = delta_t.days*(86400)
+        microseconds_s = delta_t.microseconds/1000000
+        delta_t_s = days_s + delta_t.seconds + microseconds_s
+
+        return abs(delta_t_s)
 
 
     def send_triggers(self, trigs_to_send):
@@ -196,8 +190,9 @@ class SendTriggers:
 
         Data is sent in the following format:
             "AAAA 1 1 1 1 1 ZZZZ" where "AAAA" and "ZZZZZ" are always the header
-            and footer, and the "1" values are zero or 1 if that instrument should
-            offload data (in the order of the instruments list from config)
+            and footer, and the "1" values are zero or 1 if that instrument
+            should offload data (in the order of the instruments list from
+            config)
         """
 
 
@@ -227,6 +222,9 @@ class SendTriggers:
             last_trigger[inst] = zero_time
             unsent_trigs[inst] = []
 
-        trigger_status = {'last_trigger': last_trigger, 'unsent_trigs': unsent_trigs}
+        trigger_status = {
+                          'last_trigger': last_trigger,
+                          'unsent_trigs': unsent_trigs
+                          }
 
         return trigger_status

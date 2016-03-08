@@ -8,32 +8,33 @@ from . import config
 class Stage:
     """"""
 
-    def __init__(self, classifier, target_space, send_triggers):
+    def __init__(self, classifier, target_space, send_triggers, source=config.site_name):
         self.classifier_queue = StageClassifierQueue(classifier, target_space, self)
         self.target_space = target_space
+        self.send_triggers = send_triggers
         self.data_queues = {}
         for stream in config.data_streams:
             self.data_queues[stream] = []
         # NIMS grouped by target_id, so change to dict {target_id: [indices]}
         self.data_queues['nims'] = {}
-        self.data_queues['nims-simulator'] = {}
+        self.recent_targets = []
 
     def processDataBeforeStage(self, stream, data):
         """Performs whatever preprocessing necessitated for data from a
         particular stream, adds data to appropriate target list, then returns
         index for added data in TargetSpace.
 
-        Assumes 'nims-simulator' passes a list inside a list with different tracks.
+        Assumes 'nims' passes a list inside a dict with different tracks.
         """
         if stream == 'adcp':
             data = [datetime.fromtimestamp(data[0]), data[1], data[2]]
-            self.target_space.input_data[stream].append(data)
-            return len(self.target_space.input_data[stream]) - 1
+            self.target_space.tables[stream].append(data)
+            return len(self.target_space.tables[stream]) - 1
         elif stream == 'pamguard':
             # comm format matches desired, no need to change
-            self.target_space.input_data[stream].append(data)
-            return len(self.target_space.input_data[stream]) - 1
-        elif stream == 'nims' or stream == 'nims-simulator':
+            self.target_space.tables[stream].append(data)
+            return len(self.target_space.tables[stream]) - 1
+        elif stream == 'nims':
             indices = {}
             timestamp = data[0]
             for track in data[1]:
@@ -42,9 +43,8 @@ class Stage:
                         track['height'], track['size_sq_m'], track['speed_mps'],
                         track['min_angle_m'], track['min_range_m'], track['max_angle_m'],
                         track['max_range_m'], track['last_pos_angle'], track['last_pos_range']]
-                self.target_space.input_data[stream].append(new_data)
-                indices[track['id']] = len(self.target_space.input_data[stream]) - 1
-
+                self.target_space.tables[stream].append(new_data)
+                indices[track['id']] = len(self.target_space.tables[stream]) - 1
         elif stream in config.data_streams:
             raise ValueError("No stage processing functionality exists for" \
                              " data stream {0}.".format(stream))
@@ -61,30 +61,77 @@ class Stage:
         if stream not in config.data_streams:
             raise ValueError("Error adding data to stage. Stream {0} not \
                               defined in config file.".format(stream))
-        stageIndices = self.processDataBeforeStage(stream, data)
-        if stream == 'nims' or stream == 'nims-simulator':
-            for track_id in stageIndices:
+        stage_indices = self.processDataBeforeStage(stream, data)
+        if stream == 'nims':  # indexed
+            for track_id in istage_indices:
                 if track_id not in self.data_queues[stream]:
                     self.data_queues[stream][track_id] = []
-                self.data_queues[stream][track_id].append(stageIndices[track_id])
+                self.data_queues[stream][track_id].append(stage_indices[track_id])
+        elif stream == 'pamguard' or stream == 'adcp':  # one at any time
+            self.data_queues[stream] = stage_indices
         else:
-            self.data_queues[stream].append(stageIndices)
+            self.data_queues[stream].append(stage_indices)  # can have multiple
 
-    def createOrUpdateTarget(self, stream, key):
+    def createOrUpdateTarget(self, nims=[], pamguard=[], adcp=[]):
         """Appends or creates a Target instance based on current staged data."""
-        self.data_queues[stream]
+        if pamguard != [] and nims == []:
+            for target in self.recent_targets:
+                # Data is captured in a nims+pamguard Target that will be saved, ignore
+                if target.indices.get('pamguard') == pamguard): break
+            else:
+                # Data not captured in any other Targets, create a new one
+                return Target(target_space=self.target_space,
+                              source=self.source,
+                              date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                              indices={'pamguard': pamguard, 'adcp': adcp})
+        elif nims != [] and nims[1] != []:
+            for target in self.recent_targets:
+                if target.get_entry('nims')['id'] == nims[0]:
+                    # There's an existing target with that id, update that Target object
+                    updated_target = target.update_entry('nims', nims[1])
+                    return updated_target
+                else:
+                    if len(nims[1]) == 1:
+                        # We don't have existing targets and only one index in queue
+                        return Target(target_space=self.target_space,
+                                      source=self.source,
+                                      date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                                      indices={'nims': nims[1][0], 'pamguard': pamguard, 'adcp': adcp})
+                    elif len(nims[1]) > 1:
+                        # We don't have existing targets, but multiple indices in queue
+
+
+        # Adds itself to recent_targets list
+        self.recent_targets.append(target)
 
     # Should be looping. That way, we can check time-based conditions.
     def processEligibleStagedData(self):
         """Deletes, classifies, or sends data to rules if eligible."""
-        for track_id in self.data_queues['nims-simulator']:
-            if len(self.data_queues['nims-simulator'][track_id]) >=
-                    config.data_streams_classifier_triggers['nims-simulator_max_pings']:
-                # create/update Target
-                target = createOrUpdateTarget()
-                # remove from stage
-                self.data_queues['nims-simulator'][track_id] = []
-                # trigger classification
+        # Only try to create new target in potential pamguard only case
+        if self.data_queues['pamguard'] != []:
+            pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
+                    self.target_space.entryByIndex('pamguard',
+                    self.data_queues['pamguard']).get('timestamp'))
+            if pamguard_exceeds_max_time:
+                target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
+                                              adcp=self.data_queues['adcp'])
+                self.data_queues['pamguard'] = []
+                self.recent_targets.append(target)
+                self.send_triggers.check_saving_rules(target, None)
+                self.send_triggers.send_triggers_if_ready()
+
+        for track_id in self.data_queues['nims']:
+            # If max_pings or max_time, create/update Target
+            ping_count = len(self.data_queues['nims'][track_id])
+            exceeds_max_pings = (ping_count >=
+                    config.data_streams_classifier_triggers['nims'])
+            exceeds_max_time = (datetime.datetime.utcnow() -
+                    self.data_queues['nims'][track_id][ping_count - 1])
+            if exceeds_max_pings or exceeds_max_time:
+                target = createOrUpdateTarget(nims=(track_id,self.data_queues['nims'][track_id]),
+                                              pamguard=self.data_queues['pamguard'],
+                                              adcp=self.data_queues['adcp'])
+                self.data_queues['nims'][track_id] = []
                 self.classifier_queue.addTargetToQueue(target)
 
 

@@ -34,9 +34,8 @@ instrument_ranges = {'camera': 8,
 					 'blueview': 10,
 					 'm3': 50}
 
-data_streams = ['adcp', 'camera', 'pamguard', 'nims', 'nims-simulator']
-data_streams_classifier_triggers = {'nims_max_pings': 10, 'nims_max_time': 1000,
-									'nims-simulator_max_pings': 10, 'nims-simulator_max_time': 1000}
+data_streams = ['adcp', 'camera', 'pamguard', 'nims']
+data_streams_classifier_triggers = {'nims_max_pings': 10, 'nims_max_time': 1000}
 
 # This supplies the order and contents for classification features
 classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_day',
@@ -61,13 +60,13 @@ background_hyperspaces = [
 	'speed': (1, 5), # m/s
 	'deltav': (0.5, 4), # m/s
 	'target_strength': (90, 150), # ??
-	'classification': 'Marine Mammal'},
+	'classification': 1},
 
 	{'size': (0,.25), # m^2
 	'speed': (0,1), # m/s
 	'deltav': (0,0.5), # m/s
 	'target_strength': (0,90), # ??
-	'classification': 'Small Fish'},
+	'classification': 2},
 
 	{'size': (-np.inf, np.inf), # m^2
 	'speed': (-np.inf, np.inf), # m/s
@@ -75,7 +74,7 @@ background_hyperspaces = [
 	'target_strength': (-np.inf, np.inf), # ??
 	'time_of_day': (-np.inf, np.inf), # hours
 	'current': (-np.inf, np.inf), # m/s
-	'classification': 'Outliers'} ]
+	'classification': 3} ]
 
 # Classifications
 classifications = {
