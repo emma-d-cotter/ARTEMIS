@@ -98,7 +98,7 @@ class BackgroundClassifier():
         self.features = features
         self.classifications = classifications
 
-    def _check_background_coverage(hyperspaces, features, classifications):
+    def _check_background_coverage(self, hyperspaces, features, classifications):
         """Checks that every feature defined in the background hyperspace
         used for outliers are defined everywhere between negative infinity
         and infinity. Also checks that background defined on at least one
@@ -118,7 +118,7 @@ class BackgroundClassifier():
                 raise ValueError("Invalid background hyperspace. There exists a " \
                         "rule without a classification key.")
             if (rule['classification'] not in classifications or
-                    rule['classification'] not in classifications.values():
+                    rule['classification'] not in classifications.values()):
                 raise ValueError("Invalid classification {0} in background " \
                         "hyperspace. Valid classifications are: {1} or {2}".format(
                         rule['classification'], list(classifications.keys()),
@@ -163,16 +163,10 @@ class BackgroundClassifier():
 
         return hyperspaces
 
-    def fit(self,
-            hyperspaces=self.background_hyperspaces,
-            features=self.classifier_features,
-            classifications=self.classifications):
+    def fit(self, hyperspaces):
         """Fits background classifier after checking validity of defined hyperspace."""
-        self.hyperspaces = _check_background_coverage(hyperspaces, features,
-                classifications)
-        # Copying parameters just in case they changed, mirrors sklearn classifier.fit()
-        self.features = features
-        self.classifications = classifications
+        self.hyperspaces = self._check_background_coverage(hyperspaces, self.features,
+                self.classifications)
 
     def predict(self, X):
         """Predict the class labels for the provided data
@@ -268,7 +262,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
                           leaf_size=leaf_size,
                           metric=metric, p=p, metric_params=metric_params,
                           **kwargs)
-        self.outlier_function = _check_outlier_coverage(outliers)
+        self.outlier_function = outliers
         self.weight_function = weights
         self.target_space = target_space
 

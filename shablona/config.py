@@ -36,7 +36,9 @@ instrument_ranges = {'camera': 8,
 					 'm3': 50}
 
 data_streams = ['adcp', 'camera', 'pamguard', 'nims']
-data_streams_classifier_triggers = {'nims_max_pings': 10, 'nims_max_time': 1000}
+data_streams_classifier_triggers = {'nims_max_pings': 10,
+									'nims_max_time': 1,
+									'pamguard_max_time': 3}
 
 # This supplies the order and contents for classification features
 classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_day',

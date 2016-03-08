@@ -1,6 +1,7 @@
 import random
+import threading
 
-from datetime import datetime
+import datetime
 from .rules import SendTriggers
 from . import config
 
@@ -9,7 +10,7 @@ class Stage:
     """"""
 
     def __init__(self, classifier, target_space, send_triggers, source=config.site_name):
-        self.classifier_queue = StageClassifierQueue(classifier, target_space, self)
+        self.classifier_queue = StageClassifierQueue(classifier, target_space, self, send_triggers)
         self.target_space = target_space
         self.send_triggers = send_triggers
         self.data_queues = {}
@@ -19,6 +20,8 @@ class Stage:
         self.data_queues['nims'] = {}
         self.recent_targets = []
 
+        #self.startStageProcessing()
+
     def processDataBeforeStage(self, stream, data):
         """Performs whatever preprocessing necessitated for data from a
         particular stream, adds data to appropriate target list, then returns
@@ -27,7 +30,7 @@ class Stage:
         Assumes 'nims' passes a list inside a dict with different tracks.
         """
         if stream == 'adcp':
-            data = [datetime.fromtimestamp(data[0]), data[1], data[2]]
+            data = [datetime.datetime.fromtimestamp(data[0]), data[1], data[2]]
             self.target_space.tables[stream].append(data)
             return len(self.target_space.tables[stream]) - 1
         elif stream == 'pamguard':
@@ -77,41 +80,59 @@ class Stage:
         if pamguard != [] and nims == []:
             for target in self.recent_targets:
                 # Data is captured in a nims+pamguard Target that will be saved, ignore
-                if target.indices.get('pamguard') == pamguard): break
+                if target.indices.get('pamguard') == pamguard: break
             else:
                 # Data not captured in any other Targets, create a new one
-                return Target(target_space=self.target_space,
+                target_out = Target(target_space=self.target_space,
                               source=self.source,
-                              date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                              date=self.target_space.get_entry_by_index('pamguard', pamguard)['timestamp'],
                               indices={'pamguard': pamguard, 'adcp': adcp})
+                target_out.update_classifier_table
+                self.recent_targets.append(target_out)
+                return target_out
         elif nims != [] and nims[1] != []:
             for target in self.recent_targets:
                 if target.get_entry('nims')['id'] == nims[0]:
                     # There's an existing target with that id, update that Target object
-                    updated_target = target.update_entry('nims', nims[1])
-                    return updated_target
+                    target.update_entry('nims', nims[1])
+                    return target
                 else:
+                    latest_timestamp = max(self.target_space.get_entry_by_index('pamguard', pamguard),
+                                           self.target_space.get_entry_by_index('nims', nims[1][len(nims[1])-1]))
                     if len(nims[1]) == 1:
                         # We don't have existing targets and only one index in queue
-                        return Target(target_space=self.target_space,
+                        target_out = Target(target_space=self.target_space,
                                       source=self.source,
-                                      date=self.target_space.get_entry_by_index(pamguard)['timestamp'],
+                                      date=latest_timestamp,
                                       indices={'nims': nims[1][0], 'pamguard': pamguard, 'adcp': adcp})
+                        self.recent_targets.append(target_out)
+                        return target_out
                     elif len(nims[1]) > 1:
                         # We don't have existing targets, but multiple indices in queue
+                        combined_entry = self.target_space.combine_entries('nims', nims[1])
+                        self.target_space.tables['nims'].append(combined_entry)
+                        index = len(self.target_space.tables['nims']) - 1
+                        target_out = Target(target_space=self.target_space,
+                                      source=self.source,
+                                      date=latest_timestamp,
+                                      indices={'nims': index, 'pamguard': pamguard, 'adcp': adcp})
+                        self.recent_targets.append(target_out)
+                        return target_out
 
-
-        # Adds itself to recent_targets list
-        self.recent_targets.append(target)
+    def startStageProcessing(self):
+        """Creates thread, starts loop that processes stage data."""
+        threading.Thread(target=self.processEligibleStagedData).start()
 
     # Should be looping. That way, we can check time-based conditions.
     def processEligibleStagedData(self):
         """Deletes, classifies, or sends data to rules if eligible."""
         # Only try to create new target in potential pamguard only case
+        #while True:
         if self.data_queues['pamguard'] != []:
             pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.entryByIndex('pamguard',
-                    self.data_queues['pamguard']).get('timestamp'))
+                    self.target_space.get_entry_by_index('pamguard',
+                    self.data_queues['pamguard']).get('timestamp') >= datetime.timedelta(
+                    seconds=config.data_streams_classifier_triggers['pamguard_max_time']))
             if pamguard_exceeds_max_time:
                 target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
@@ -124,29 +145,38 @@ class Stage:
             # If max_pings or max_time, create/update Target
             ping_count = len(self.data_queues['nims'][track_id])
             exceeds_max_pings = (ping_count >=
-                    config.data_streams_classifier_triggers['nims'])
+                    config.data_streams_classifier_triggers['nims_max_pings'])
             exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.data_queues['nims'][track_id][ping_count - 1])
+                    self.target_space.get_entry_by_index('nims',
+                    self.data_queues['nims'][track_id][-1]).get('timestamp')
+                    >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time']))
             if exceeds_max_pings or exceeds_max_time:
-                target = createOrUpdateTarget(nims=(track_id,self.data_queues['nims'][track_id]),
+                target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
                                               pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
                 self.data_queues['nims'][track_id] = []
                 self.classifier_queue.addTargetToQueue(target)
 
+        max_max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
+                       config.data_streams_classifier_triggers['nims_max_time'])
+        for recent_target in self.recent_targets:
+            if datetime.datetime.utcnow() - recent_target.date >= max_max_time:
+                # Remove recent target from list
+                self.recent_targets.remove(x)
 
 class StageClassifierQueue:
     """"""
 
-    def __init__(classifier, target_space, stage, send_triggers, prioritization='lifo'):
+    def __init__(self, classifier, target_space, stage, send_triggers, prioritization='lifo'):
         self.classifier = classifier
         self.stage = stage
         self.target_space = target_space
         self.prioritization = prioritization
         self.queue = []
         self.send_triggers = send_triggers
+        self.startClassifierQueueProcessing()
 
-    def addTargetToQueue(target):
+    def addTargetToQueue(self, target):
         """Adds a target object to the 'to be classified' queue using the
         prioritization scheme defined for the class.
 
@@ -158,13 +188,18 @@ class StageClassifierQueue:
             raise ValueError("Prioritization scheme {0} undefined for " \
                     "StageClassifierQueue.".format(self.prioritization))
 
-    def fitClassificationsAndTriggerRules():
+    def startClassifierQueueProcessing(self):
+        """Creates thread, starts loop that processes stage data."""
+        threading.Thread(target=self.fitClassificationsAndTriggerRules).start()
+
+    def fitClassificationsAndTriggerRules(self):
         """Continuously classifies any targets inside of queue."""
         while True:
             if len(self.queue) >= 1:
                 target = self.queue.pop()
-                X = target_space.classifier_features[target.data_indices['classifier']]
-                classification = self.classifier.fit(X) #random.choice()
+                X = target_space.classifier_features[target.indices['classifier']]
+                classification = self.classifier.predict(X) #random.choice()
                 target.indices['classification'] = classification
+                print('Classified target {0}, classification: {1}'.format(target, classification))
                 self.send_triggers.check_saving_rules(target, classification)
             self.send_triggers.send_triggers_if_ready()

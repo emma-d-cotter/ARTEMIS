@@ -28,37 +28,9 @@ class Target:
                     "'classifier_{features,classifications}' or data stream name.".format(table))
         elif table not in self.tables:
             raise ValueError("Table {0} not found in target space. Following tables available:  " \
-                    ' '.join(list(self.tables.keys()))
+                    ' '.join(list(self.tables.keys())))
         else:
             return dict(zip(headers[table], self.tables[table][self.indices[table]]))
-
-    def combine_entries(self, table, indices):
-        """Expects indices to be in order of read. That is, last
-        entry is the latest in the list.
-        """
-        combined_entry = []
-        for column_name in headers[table]:
-            values = []
-            for index in indices:
-                values.append(target_space.tables[table][index][column_name])
-
-            if column_name in ['timestamp', 'first_ping', 'min_angle_m', 'min_range_m']:
-                combined_entry.append(min(values))
-            elif column_name in ['pings_visible', 'max_angle_m', 'max_range_m']:
-                combined_entry.append(max(values))
-            elif column_name in ['id']:
-                if len(set(values)) > 1:
-                    raise ValueError("Internal errror. All ids " \
-                            "in combine_entries are expected to match.")
-                combined_entry.append(values[0])
-            elif column_name in ['target_strength', 'width', 'height',
-                                 'size_sq_m', 'speed_mps']:
-                combined_entry.append(sum(values) / float(values))
-            elif column_name in ['last_pos_angle', 'last_pos_range']:
-                combined_entry.append(values[len(values) - 1])
-            elif column_name == 'aggregate_indices':
-                combined_entry.append(indices)
-        return combined_entry
 
     def update_entry(self, table, indices):
         """Rules to update an existing target entry with
@@ -76,32 +48,34 @@ class Target:
                 location = len(self.target_space.tables[table])
             else:
                 location = old_index
-            new_entry = self.combine_entries(table, indices)
+            new_entry = self.target_space.combine_entries(table, indices)
             self.target_space.tables[table][location] = new_entry
 
-    # TODO: Remove all getX() when all calls gone
-    def getNIMS(self):
-        if 'nims' in self.target_space.input_data and self.indices['nims'] != None:
-            return dict(zip(headers['nims'],
-                            self.target_space.input_data['nims'][self.indices['nims']]))
-
-    def getPamGuard(self):
-        if 'pamguard' in self.target_space.input_data and self.indices['pamguard'] != None:
-            return dict(zip(headers['pamguard'],
-                            self.target_space.input_data['pamguard'][self.indices['pamguard']]))
-
-    def getADCP(self):
-        if 'adcp' in self.target_space.input_data and self.indices['adcp'] != None:
-            return dict(zip(headers['adcp'],
-                            self.target_space.input_data['adcp'][self.indices['adcp']]))
+    def update_classifier_table(self):
+        """Uses Target's data stream entries to update classifier tables."""
+        if self.indices.get('classifier') == None:
+            index = len(self.target_space.tables['classifier_features'])
+            self.indices['classifier'] = index
+        else:
+            index = self.indices['classifier']
+        nims_entry = self.get_entry('nims')
+        adcp_entry = self.get_entry('adcp')
+        self.target_space.tables['classifier_features'][index] = [
+            nims_entry['size_sq_m'],  # size
+            nims_entry['speed_mps'],  # speed
+            0,  # deltav
+            nims_entry['target_strength'],  # target_strength
+            abs(nims_entry['timestamp'].time() - datetime.time()).seconds,  # time_of_day
+            adcp_entry['speed']]  # current
+        self.target_space.tables['classifier_classifications'][index] = None
+        return index
 
 class TargetSpace:
     """"""
-
-    def __init__(self):
+    def __init__(self, data_streams=config.data_streams):
         self.targets = []
         self.tables = {}
-        for stream in config.data_streams:
+        for stream in data_streams:
             self.tables[stream] = []
         self.classifier_features = []
         self.classifier_classifications = []
@@ -120,6 +94,35 @@ class TargetSpace:
                     len(self.tables[table])))
         else:
             return dict(zip(headers[table], self.tables[table][index]))
+
+    def combine_entries(self, table, indices):
+        """Expects indices to be in order of read. That is, last
+        entry is the latest in the list.
+        """
+        combined_entry = []
+        for column_name in headers[table]:
+            values = []
+            for index in indices:
+                values.append(self.tables[table][index][column_name])
+
+            if column_name in ['first_ping', 'min_angle_m', 'min_range_m']:
+                combined_entry.append(min(values))
+            elif column_name in ['timestamp', 'pings_visible', 'max_angle_m', 'max_range_m']:
+                combined_entry.append(max(values))
+            elif column_name in ['id']:
+                if len(set(values)) > 1:
+                    raise ValueError("Internal errror. All ids " \
+                            "in combine_entries are expected to match.")
+                combined_entry.append(values[0])
+            elif column_name in ['target_strength', 'width', 'height',
+                                 'size_sq_m', 'speed_mps']:
+                combined_entry.append(sum(values) / float(values))
+            elif column_name in ['last_pos_angle', 'last_pos_range']:
+                combined_entry.append(values[len(values) - 1])
+            elif column_name == 'aggregate_indices':
+                combined_entry.append(indices)
+        return combined_entry
+
 
     def load_targets(self, file, format, delimiter=';'):
         """Reads targets from file, creating Target instances and appending

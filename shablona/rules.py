@@ -46,7 +46,7 @@ class SendTriggers:
         """
 
         classes_to_save = [1,2,3]
-        PAMGuard = target.get_entry('pamguard'))
+        PAMGuard = target.get_entry('pamguard')
         ADCP = target.get_entry('adcp')
         NIMS = target.get_entry('nims')
 
