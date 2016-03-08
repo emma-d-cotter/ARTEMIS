@@ -3,40 +3,42 @@ from datetime import datetime
 from . import config
 from .classification import _scale_axis
 
+
+headers = {}
+headers['adcp'] = ['timestamp', 'speed', 'heading']
+headers['pamguard'] = ['timestamp']
+headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
+        'target_strength', 'width', 'height', 'size_sq_m', 'speed_mps',
+        'min_angle_m', 'min_range_m', 'max_angle_m', 'max_range_m',
+        'last_pos_angle', 'last_pos_range']
+headers['classifier'] = []  # Should these be relative to input headers?
+
 class Target:
     """"""
-    def __init__(self, source="Unknown", date=datetime.utcnow(), indices=None):
+    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(), indices={}):
+        self.target_space = target_space
         self.source = source
         self.date = date
-        if data_indices == None:
-            self.indices = {}
-        else:
-            self.indices = indices
+        self.indices = indices
 
     # TODO: convert get functions to automated format, likely getData('nims')
-    def getNIMS(self, index):
-        if 'nims' in self.target_space.input_data:
-            return self.target_space.input_data['nims'][index]
+    def getNIMS(self):
+        if 'nims' in self.target_space.input_data and self.indices['nims'] != None:
+            return dict(zip(headers['nims'],
+                            self.target_space.input_data['nims'][self.indices['nims']]))
 
-    def getPamGuard(self, index):
-        if 'pamguard' in self.target_space.input_data:
-            return self.target_space.input_data['pamguard'][index]
+    def getPamGuard(self):
+        if 'pamguard' in self.target_space.input_data and self.indices['pamguard'] != None:
+            return dict(zip(headers['pamguard'],
+                            self.target_space.input_data['pamguard'][self.indices['pamguard']]))
 
-    def getADCP(self, index):
-        if 'adcp' in self.target_space.input_data:
-            return self.target_space.input_data['adcp'][index]
+    def getADCP(self):
+        if 'adcp' in self.target_space.input_data and self.indices['adcp'] != None:
+            return dict(zip(headers['adcp'],
+                            self.target_space.input_data['adcp'][self.indices['adcp']]))
 
 class TargetSpace:
     """"""
-
-    headers = {}
-    headers['adcp'] = ['timestamp', 'speed', 'heading']
-    headers['pamguard'] = ['timestamp']
-    headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
-            'target_strength', 'width', 'height', 'size_sq_m', 'speed_mps',
-            'min_angle_m', 'min_range_m', 'max_angle_m', 'max_range_m',
-            'last_pos_angle', 'last_pos_range']
-    headers['classifier'] = []  # Should these be relative to input headers?
 
     def __init__(self):
         self.targets = []
@@ -56,7 +58,8 @@ class TargetSpace:
                 with open(file, 'r') as f:
                     for record in csv.DictReader(f, delimiter = delimiter):
 
-                        instance = Target(source=record['source'],
+                        instance = Target(self.target_space,
+                                          source=record['source'],
                                           date=record['date'])
                         index = len(self.targets)
                         self.targets.append(index)
