@@ -51,7 +51,7 @@ class SendTriggers:
         NIMS = target.get_entry('nims')
 
         # if there is a marine mammal detection from  PAMGuard
-        if PAMGuard != None:
+        if PAMGuard:
             # if there is no detection from NIMS, only save hydrophones
             if not NIMS:
                 new_trigs = ['hydrophones']
