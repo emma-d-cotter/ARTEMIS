@@ -1,8 +1,8 @@
-from .comms_NIMS_sim import read_tracks
-from .comms_pamguard import PAMGuard_read
-from .comms_adcp import ADCP_read
-from . import stage
-from . import targets
+from comms_NIMS_sim import read_tracks
+from comms_pamguard import PAMGuard_read
+from comms_adcp import ADCP_read
+import stage
+import targets
 import threading
 
 class InstrumentComms:

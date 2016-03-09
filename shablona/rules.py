@@ -1,10 +1,10 @@
 import socket
 from datetime import datetime
-from .config import instrument_ranges
-from .config import ADCP_threshold
-from .config import instruments
-from .config import instrument_buffer_sizes
-from .config import saving_parameters
+from config import instrument_ranges
+from config import ADCP_threshold
+from config import instruments
+from config import instrument_buffer_sizes
+from config import saving_parameters
 
 class SendTriggers:
 

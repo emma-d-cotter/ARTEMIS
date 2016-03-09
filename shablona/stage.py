@@ -2,8 +2,8 @@ import random
 import threading
 
 import datetime
-from .rules import SendTriggers
-from . import config
+from rules import SendTriggers
+import config
 
 
 class Stage:

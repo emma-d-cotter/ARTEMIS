@@ -11,7 +11,7 @@ from sklearn.neighbors.base import NeighborsBase, RadiusNeighborsMixin, \
 from sklearn.utils import check_array
 from sklearn.utils.extmath import weighted_mode
 
-from . import config
+import config
 
 
 def _within_interval(x, interval):

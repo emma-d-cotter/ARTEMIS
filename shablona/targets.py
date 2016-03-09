@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from . import config
-from .classification import _scale_axis
+import config
+from classification import _scale_axis
 
 
 headers = {}
