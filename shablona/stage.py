@@ -45,7 +45,8 @@ class Stage:
                         track['first_ping'], track['target_strength'], track['width'],
                         track['height'], track['size_sq_m'], track['speed_mps'],
                         track['min_angle_m'], track['min_range_m'], track['max_angle_m'],
-                        track['max_range_m'], track['last_pos_angle'], track['last_pos_range']]
+                        track['max_range_m'], track['last_pos_angle'],
+                        track['last_pos_range'], None]
                 self.target_space.tables[stream].append(new_data)
                 indices[track['id']] = len(self.target_space.tables[stream]) - 1
         elif stream in config.data_streams:
@@ -78,10 +79,14 @@ class Stage:
     def createOrUpdateTarget(self, nims=[], pamguard=[], adcp=[]):
         """Appends or creates a Target instance based on current staged data."""
         if pamguard != [] and nims == []:
+            print("pamguard != [] and nims == []")
             for target in self.recent_targets:
                 # Data is captured in a nims+pamguard Target that will be saved, ignore
-                if target.indices.get('pamguard') == pamguard: break
+                if target.indices.get('pamguard') == pamguard:
+                    print("target.indices.get('pamguard') == pamguard")
+                    break
             else:
+                print("target.indices.get('pamguard') != pamguard for all")
                 # Data not captured in any other Targets, create a new one
                 target_out = Target(target_space=self.target_space,
                               source=self.source,
@@ -89,25 +94,34 @@ class Stage:
                               indices={'pamguard': pamguard, 'adcp': adcp})
                 target_out.update_classifier_table
                 self.recent_targets.append(target_out)
+                print("target_out: ", target_out)
                 return target_out
         elif nims != [] and nims[1] != []:
+            print("nims != [] and nims[1] != []")
+            print('recent_targets: ', self.recent_targets)
             for target in self.recent_targets:
                 if target.get_entry('nims')['id'] == nims[0]:
+                    print("target.get_entry('nims')['id'] == nims[0]")
                     # There's an existing target with that id, update that Target object
                     target.update_entry('nims', nims[1])
+                    print("target_out: ", target)
                     return target
-                else:
+            else:
+                    print("target.get_entry('nims')['id'] != nims[0] for all")
                     latest_timestamp = max(self.target_space.get_entry_by_index('pamguard', pamguard),
                                            self.target_space.get_entry_by_index('nims', nims[1][len(nims[1])-1]))
                     if len(nims[1]) == 1:
+                        print("len(nims[1]) == 1")
                         # We don't have existing targets and only one index in queue
                         target_out = Target(target_space=self.target_space,
                                       source=self.source,
                                       date=latest_timestamp,
                                       indices={'nims': nims[1][0], 'pamguard': pamguard, 'adcp': adcp})
                         self.recent_targets.append(target_out)
+                        print("target_out: ", target_out)
                         return target_out
                     elif len(nims[1]) > 1:
+                        print("len(nims[1]) > 1")
                         # We don't have existing targets, but multiple indices in queue
                         combined_entry = self.target_space.combine_entries('nims', nims[1])
                         self.target_space.tables['nims'].append(combined_entry)
@@ -117,6 +131,7 @@ class Stage:
                                       date=latest_timestamp,
                                       indices={'nims': index, 'pamguard': pamguard, 'adcp': adcp})
                         self.recent_targets.append(target_out)
+                        print("target_out: ", target_out)
                         return target_out
 
     def startStageProcessing(self):
@@ -151,9 +166,13 @@ class Stage:
                     self.data_queues['nims'][track_id][-1]).get('timestamp')
                     >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time']))
             if exceeds_max_pings or exceeds_max_time:
+                print('nims=(',track_id,",",self.data_queues['nims'][track_id],")")
+                print('pamguard=',self.data_queues['pamguard'])
+                print('adcp=',self.data_queues['adcp'])
                 target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
                                               pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
+                print("target after createOrUpdateTarget(): ", target)
                 self.data_queues['nims'][track_id] = []
                 self.classifier_queue.addTargetToQueue(target)
 
@@ -162,7 +181,8 @@ class Stage:
         for recent_target in self.recent_targets:
             if datetime.datetime.utcnow() - recent_target.date >= max_max_time:
                 # Remove recent target from list
-                self.recent_targets.remove(x)
+                print("recent_targets.remove(",recent_target,")")
+                #self.recent_targets.remove(x)
 
 class StageClassifierQueue:
     """"""
@@ -197,7 +217,10 @@ class StageClassifierQueue:
         while True:
             if len(self.queue) >= 1:
                 target = self.queue.pop()
-                X = target_space.classifier_features[target.indices['classifier']]
+                print('queue: ', self.queue)
+                print('target: ', target)
+                print("Finally, going to classify! Check out target_space classifier index {0}.".format(target.indices['classifier']))
+                X = self.target_space.tables['classifier_features'][target.indices['classifier']]
                 classification = self.classifier.predict(X) #random.choice()
                 target.indices['classification'] = classification
                 print('Classified target {0}, classification: {1}'.format(target, classification))
