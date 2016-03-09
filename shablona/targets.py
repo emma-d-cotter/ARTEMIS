@@ -6,12 +6,12 @@ from .classification import _scale_axis
 
 headers = {}
 headers['adcp'] = ['timestamp', 'speed', 'heading']
-headers['pamguard'] = ['timestamp']
+headers['pamguard'] = ['timestamp', 'detection']
 headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
         'target_strength', 'width', 'height', 'size_sq_m', 'speed_mps',
         'min_angle_m', 'min_range_m', 'max_angle_m', 'max_range_m',
         'last_pos_angle', 'last_pos_range', 'aggregate_indices']
-headers['classifier'] = []  # Should these be relative to input headers?
+headers['classifier'] = config.classifier_features
 
 class Target:
     """"""
@@ -26,11 +26,14 @@ class Target:
         if table not in headers:
             raise ValueError("{0} is an invalid data stream or table name. Valid inputs are " \
                     "'classifier_{features,classifications}' or data stream name.".format(table))
-        elif table not in self.tables:
-            raise ValueError("Table {0} not found in target space. Following tables available:  " \
-                    ' '.join(list(self.tables.keys())))
+        elif table not in self.target_space.tables:
+            return None
+            #raise ValueError("Table {0} not found in target space. Following tables available:  " \
+            #        ' '.join(list(self.target_space.tables.keys())))
+        elif self.indices.get(table) == None:
+            return None
         else:
-            return dict(zip(headers[table], self.tables[table][self.indices[table]]))
+            return dict(zip(headers[table], self.target_space.tables[table][self.indices[table]]))
 
     def update_entry(self, table, indices):
         """Rules to update an existing target entry with
@@ -68,6 +71,7 @@ class Target:
             abs(nims_entry['timestamp'].time() - datetime.time()).seconds,  # time_of_day
             adcp_entry['speed']]  # current
         self.target_space.tables['classifier_classifications'][index] = None
+        self.target_space.classifier_index_to_target[index] = self
         return index
 
 class TargetSpace:
@@ -77,8 +81,8 @@ class TargetSpace:
         self.tables = {}
         for stream in data_streams:
             self.tables[stream] = []
-        self.classifier_features = []
-        self.classifier_classifications = []
+        self.tables['classifier_features'] = []
+        self.tables['classifier_classifications'] = []
         self.classifier_index_to_target = {}
 
     def get_entry_by_index(self, table, index):
