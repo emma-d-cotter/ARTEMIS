@@ -6,6 +6,8 @@ from config import instruments
 from config import instrument_buffer_sizes
 from config import saving_parameters
 
+# TODO: add function to deal with strobes. If it's night...we don't want to
+# offload immediately
 class SendTriggers:
 
     def __init__(self):
