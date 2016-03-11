@@ -11,8 +11,8 @@ import config
 class Stage:
     """"""
 
-    def __init__(self, classifier, target_space, send_triggers, source=config.site_name):
-        self.classifier_queue = StageClassifierQueue(classifier, target_space, self, send_triggers)
+    def __init__(self, processor, target_space, send_triggers, source=config.site_name):
+        self.processor = processor
         self.target_space = target_space
         self.send_triggers = send_triggers
         self.data_queues = {}
@@ -165,7 +165,7 @@ class Stage:
                                               pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
                 self.data_queues['nims'][track_id] = []
-                self.classifier_queue.addTargetToQueue(target)
+                self.processor.addTargetToQueue(target)
 
         max_max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
                        config.data_streams_classifier_triggers['nims_max_time'])
@@ -173,52 +173,3 @@ class Stage:
             if (datetime.datetime.utcnow() - recent_target.date).seconds >= max_max_time:
                 # Remove recent target from list
                 self.recent_targets.remove(recent_target)
-
-class StageClassifierQueue:
-    """"""
-
-    def __init__(self, classifier, target_space, stage, send_triggers, prioritization='lifo'):
-        self.classifier = classifier
-        self.stage = stage
-        self.target_space = target_space
-        self.prioritization = prioritization
-        self.queue = []
-        self.send_triggers = send_triggers
-        self.startClassifierQueueProcessing()
-        self.classification_count = 0
-
-    def addTargetToQueue(self, target):
-        """Adds a target object to the 'to be classified' queue using the
-        prioritization scheme defined for the class.
-
-        Last target in list will be considered front of queue (first to be popped).
-        """
-        if self.prioritization == 'lifo':
-            self.queue.append(target)
-        else:
-            raise ValueError("Prioritization scheme {0} undefined for " \
-                    "StageClassifierQueue.".format(self.prioritization))
-
-    def startClassifierQueueProcessing(self):
-        """Creates thread, starts loop that processes stage data."""
-        threading.Thread(target=self.fitClassificationsAndTriggerRules).start()
-
-    def fitClassificationsAndTriggerRules(self):
-        """Continuously classifies any targets inside of queue."""
-        while True:
-            if len(self.queue) >= 1:
-                target = self.queue.pop()
-                X = np.array(target.get_classifier_features()).reshape(1, -1)
-                print("inputs (X) for classification:", X)
-                classification = self.classifier.predict(X)
-                target.indices['classification'] = classification
-                print('Classified target {0}, classification: {1}'.format(target, classification))
-                self.target_space.tables['classifier_features'].append(X)
-                self.target_space.tables['classifier_classifications'].append(classification)
-                target.indices['classifier'] = len(self.target_space.tables['classifier_features']) - 1
-                self.send_triggers.check_saving_rules(target, classification)
-                self.classification_count += 1
-                if self.classification_count < config.refit_params['refit_classifier_count']:
-                    #self.classifier.refit()
-                    self.target_space.update()
-            self.send_triggers.send_triggers_if_ready()

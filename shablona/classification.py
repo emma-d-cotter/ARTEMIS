@@ -329,7 +329,3 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
             y_pred = y_pred.ravel()
 
         return y_pred
-
-    def refit(self):
-        classifier.fit(self.target_space.tables['classifier_features'],
-                       self.target_space.tables['classifier_classifications'])

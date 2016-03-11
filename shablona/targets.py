@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import config
-from classification import _scale_axis
 
 
 headers = {}
@@ -19,14 +18,12 @@ def _get_minutes_since_midnight(timestamp):
 
 class Target:
     """"""
-    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(), indices={}):
+    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(),
+                 classification=None, indices={}):
         self.target_space = target_space
         self.source = source
-        if type(date) == type(datetime.utcnow()):
-            self.date = date
-        else:
-            raise ValueError("Target.date should be datetime object")
         self.date = date
+        self.classification = classification
         self.indices = indices
 
     def get_entry(self, table):
@@ -131,67 +128,43 @@ class TargetSpace:
                 combined_entry.append(indices)
         return combined_entry
 
+    def update_classifier_tables(self, target):
+        """Permanently store recently classified features and classifications."""
+        # WARNING: get_classifier_features() recalculates the features based on
+        #   the current table entries. It could (but shouldn't) be that a target
+        #   is classified, more target data arrives, but the target was never
+        #   reclassified before old targets are removed. This means that we'd
+        #   store updated features but with an old classification.
+        #   A potential solution may be to store the number of pings used to
+        #   create classification features from agg_indices.
+        self.tables['classifier_features'].append(target.get_classifier_features)
+        self.tables['classifier_classifications'].append(target.classification)
+        target.indices['classifier'] = len(self.target_space.tables['classifier_features']) - 1
 
-    def load_targets(self, file, format, delimiter=';'):
-        """Reads targets from file, creating Target instances and appending
-        features and classification to relevant numpy array.
+    def update(self):
         """
-        if format == 'csv':
-            if os.path.isfile(file):
-                with open(file, 'r') as f:
-                    for record in csv.DictReader(f, delimiter = delimiter):
+        remove old targets from target space
+        """
+        self.remove_old_nims()
+        self.remove_old_pamguard()
+        self.remove_old_adcp()
 
-                        instance = Target(self.target_space,
-                                          source=record['source'],
-                                          date=record['date'])
-                        index = len(self.targets)
-                        self.targets.append(index)
+    def remove_old_nims(self):
+        """
+        Remove nims data older than drop_target_time. Update minimum
+        time of all targets (to avoid dropping relevant ADCP data)
+        """
+        # remove all targets with nims that have not been seen
+        # for drop_target_time seconds
+        indices = []
+        for i, target in enumerate(self.tables['nims']):
 
-                        if record['classifiable']:
-                            assert(len(self.classifier_classifications) == index)
-                            assert(len(self.classifier_features) == index)
+            if target[-1] != None and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
+                target[-1].append(i)
+                indices.extend(target[-1])
 
-                            instance.indices['classifier'] = index
-                            self.classifier_index_to_target[index] = instance
-                            self.classifier_features.append(
-                                _scale_axis(record['size'], 'size'),
-                                _scale_axis(record['speed'], 'speed'),
-                                _scale_axis(record['deltav'], 'deltav'),
-                                _scale_axis(record['target_strength'],
-                                        'target_strength'),
-                                _scale_axis(record['time_of_day'],
-                                        'time_of_day'),
-                                _scale_axis(record['current'], 'current'))
-                            self.classifier_classifications.append(record['classification'])
-
-            else:
-                raise IOError("Unable to find csv file {0} to load targets.".
-                        format(file))
-
-        def update(self):
-            """
-            remove old targets from target space
-            """
-            self.remove_old_nims()
-            self.remove_old_pamguard()
-            self.remove_old_adcp()
-
-        def remove_old_nims(self):
-            """
-            Remove nims data older than drop_target_time. Update minimum
-            time of all targets (to avoid dropping relevant ADCP data)
-            """
-            # remove all targets with nims that have not been seen
-            # for drop_target_time seconds
-            indices = []
-            for i, target in enumerate(self.tables['nims']):
-
-                if target[-1] != None and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
-                    target[-1].append(i)
-                    indices.extend(target[-1])
-
-            for index in sorted(indices, reverse = True):
-                self.tables['nims'].pop(index)
+        for index in sorted(indices, reverse = True):
+            self.tables['nims'].pop(index)
 
     def remove_old_pamguard(self):
         """
