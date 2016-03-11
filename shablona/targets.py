@@ -13,11 +13,19 @@ headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
         'last_pos_angle', 'last_pos_range', 'aggregate_indices']
 headers['classifier'] = config.classifier_features
 
+def _get_minutes_since_midnight(timestamp):
+    return min(timestamp.hour*60 + timestamp.minute,
+        60*24 - (timestamp.hour*60 + timestamp.minute))
+
 class Target:
     """"""
     def __init__(self, target_space, source="Unknown", date=datetime.utcnow(), indices={}):
         self.target_space = target_space
         self.source = source
+        if type(date) == type(datetime.utcnow()):
+            self.date = date
+        else:
+            raise ValueError("Target.date should be datetime object")
         self.date = date
         self.indices = indices
 
@@ -30,10 +38,10 @@ class Target:
             return None
             #raise ValueError("Table {0} not found in target space. Following tables available:  " \
             #        ' '.join(list(self.target_space.tables.keys())))
-        elif self.indices.get(table) == None:
-            return None
-        else:
+        elif type(self.indices.get(table)) == type(int()):
             return dict(zip(headers[table], self.target_space.tables[table][self.indices[table]]))
+        else:
+            return None
 
     def update_entry(self, table, indices):
         """Rules to update an existing target entry with
@@ -54,7 +62,7 @@ class Target:
             new_entry = self.target_space.combine_entries(table, indices)
             self.target_space.tables[table][location] = new_entry
 
-    def update_classifier_table(self):
+    def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
         if self.indices.get('classifier') == None:
             index = len(self.target_space.tables['classifier_features'])
@@ -63,16 +71,12 @@ class Target:
             index = self.indices['classifier']
         nims_entry = self.get_entry('nims')
         adcp_entry = self.get_entry('adcp')
-        self.target_space.tables['classifier_features'][index] = [
-            nims_entry['size_sq_m'],  # size
-            nims_entry['speed_mps'],  # speed
-            0,  # deltav
-            nims_entry['target_strength'],  # target_strength
-            abs(nims_entry['timestamp'].time() - datetime.time()).seconds,  # time_of_day
-            adcp_entry['speed']]  # current
-        self.target_space.tables['classifier_classifications'][index] = None
-        self.target_space.classifier_index_to_target[index] = self
-        return index
+        return [nims_entry['size_sq_m'],  # size
+                nims_entry['speed_mps'],  # speed
+                0,  # deltav
+                nims_entry['target_strength'],  # target_strength
+                _get_minutes_since_midnight(nims_entry['timestamp']),  # time_of_day
+                adcp_entry['speed']]  # current
 
 class TargetSpace:
     """"""
@@ -104,10 +108,10 @@ class TargetSpace:
         entry is the latest in the list.
         """
         combined_entry = []
-        for column_name in headers[table]:
+        for column_index, column_name in enumerate(headers[table]):
             values = []
             for index in indices:
-                values.append(self.tables[table][index][column_name])
+                values.append(self.tables[table][index][column_index])
 
             if column_name in ['first_ping', 'min_angle_m', 'min_range_m']:
                 combined_entry.append(min(values))
@@ -120,7 +124,7 @@ class TargetSpace:
                 combined_entry.append(values[0])
             elif column_name in ['target_strength', 'width', 'height',
                                  'size_sq_m', 'speed_mps']:
-                combined_entry.append(sum(values) / float(values))
+                combined_entry.append(sum(values) / float(len(values)))
             elif column_name in ['last_pos_angle', 'last_pos_range']:
                 combined_entry.append(values[len(values) - 1])
             elif column_name == 'aggregate_indices':
