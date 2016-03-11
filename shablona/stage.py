@@ -185,6 +185,7 @@ class StageClassifierQueue:
         self.queue = []
         self.send_triggers = send_triggers
         self.startClassifierQueueProcessing()
+        self.classification_count = 0
 
     def addTargetToQueue(self, target):
         """Adds a target object to the 'to be classified' queue using the
@@ -216,4 +217,8 @@ class StageClassifierQueue:
                 self.target_space.tables['classifier_classifications'].append(classification)
                 target.indices['classifier'] = len(self.target_space.tables['classifier_features']) - 1
                 self.send_triggers.check_saving_rules(target, classification)
+                self.classification_count += 1
+                if self.classification_count < config.refit_params['refit_classifier_count']:
+                    #self.classifier.refit()
+                    self.target_space.update()
             self.send_triggers.send_triggers_if_ready()
