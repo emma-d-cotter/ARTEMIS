@@ -186,9 +186,9 @@ class TargetSpace:
             indices = []
             for i, target in enumerate(self.tables['nims']):
 
-                if target[-1] and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
+                if target[-1] != None and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
                     target[-1].append(i)
-                    indices += target[-1]
+                    indices.extend(target[-1])
 
             for index in sorted(indices, reverse = True):
                 self.tables['nims'].pop(index)
