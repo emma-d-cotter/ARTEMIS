@@ -113,6 +113,7 @@ class Stage:
                     if len(nims[1]) == 1:
                         print("len(nims[1]) == 1")
                         # We don't have existing targets and only one index in queue
+                        nims[1][0][-1] = []
                         target_out = Target(target_space=self.target_space,
                                       source=self.source,
                                       date=latest_timestamp,
@@ -224,5 +225,8 @@ class StageClassifierQueue:
                 classification = self.classifier.predict(X) #random.choice()
                 target.indices['classification'] = classification
                 print('Classified target {0}, classification: {1}'.format(target, classification))
+                self.target_space.tables['classifier_features'].append(X)
+                self.target_space.tables['classifier_classifications'].append(classification)
+                target.indices['classifier'] = len(self.target_space.tables['classifier_features']) - 1
                 self.send_triggers.check_saving_rules(target, classification)
             self.send_triggers.send_triggers_if_ready()
