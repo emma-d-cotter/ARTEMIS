@@ -89,3 +89,7 @@ classifications = {
 AMP_heading = pi/2 # heading of AMP (radians from North)
 M3_swath = [0, 120]
 M3_avgeraging_time = 5 # number of seconds over which to calculate target velocity
+
+# classification refit parameters
+refit_params = {'refit_classifier_count': 10,
+				'drop_target_time': 30}

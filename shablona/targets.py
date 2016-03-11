@@ -163,3 +163,57 @@ class TargetSpace:
             else:
                 raise IOError("Unable to find csv file {0} to load targets.".
                         format(file))
+
+        def update(self):
+            """
+            remove old targets from target space
+            """
+            self.remove_old_nims()
+            self.remove_old_pamguard()
+            self.remove_old_adcp()
+
+        def remove_old_nims(self):
+            """
+            Remove nims data older than drop_target_time. Update minimum
+            time of all targets (to avoid dropping relevant ADCP data)
+            """
+            # remove all targets with nims that have not been seen
+            # for drop_target_time seconds
+            indices = []
+            for i, target in enumerate(self.tables['nims']):
+
+                if target[-1] and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
+                    target[-1].append(i)
+                    indices += target[-1]
+
+            for index in sorted(indices, reverse = True):
+                self.tables['nims'].pop(index)
+
+    def remove_old_pamguard(self):
+        """
+        Remove pamguard data older than drop_target_time. Update minimum
+        time of all targets (to avoid dropping relevant ADCP data)
+        """
+        for i, target in reversed(list(enumerate(self.tables['pamguard']))):
+            if self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
+                del self.tables['pamguard'][i]
+
+    def remove_old_adcp(self):
+        """
+        remove all adcp data except for the most recent entry
+        """
+        for i, _ in reversed(list(enumerate(self.tables['adcp']))):
+            if i < (len(self.tables['adcp'])-1):
+                self.tables['adcp'].pop(i)
+
+    # this function is already in code...import?
+    def delta_t_in_seconds(self, datetime1, datetime2):
+        """
+        calculate delta t in seconds between two datetime objects
+        (returns absolute value, so order of dates is insignifigant)
+        """
+        delta_t = datetime1 - datetime2
+        days_s = delta_t.days*(86400)
+        microseconds_s = delta_t.microseconds/1000000
+        delta_t_s = days_s + delta_t.seconds + microseconds_s
+        return abs(delta_t_s)
