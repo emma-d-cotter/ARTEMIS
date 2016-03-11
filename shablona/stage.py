@@ -110,7 +110,7 @@ class Stage:
                         latest_timestamp = self.target_space.get_entry_by_index('nims', nims[1][-1])['timestamp']
                     if len(nims[1]) == 1:
                         # We don't have existing targets and only one index in queue
-                        nims[1][0][-1] = []
+                        self.target_space.tables['nims'][nims[1][0]][-1] = []  # changes agg_indices to []
                         target_out = Target(target_space=self.target_space,
                                       source=config.site_name + "_auto",
                                       date=latest_timestamp,
