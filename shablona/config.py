@@ -6,7 +6,7 @@ from datetime import datetime
 # classified targets. site_name_auto indicates that a classification was
 # determined by the classifier, and site_name_manual indicates that a
 # classification was either entered or verified during manual review
-site_name = ['MSL']
+site_name = 'MSL'
 
 instruments = ['adcp', 'camera', 'blueview', 'm3', 'hydrophones']
 
