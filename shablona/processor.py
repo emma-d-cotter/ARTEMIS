@@ -2,8 +2,10 @@ import queue
 import threading
 import os
 import csv
+import numpy as np
 
 import targets
+import config
 from classification import _scale_axis
 
 class ClassificationProcessor:
@@ -86,13 +88,12 @@ class ClassificationProcessor:
                 target = self.queue.get()
                 X = np.array(target.get_classifier_features()).reshape(1, -1)
                 print("inputs (X) for classification:", X)
-                classification = self.classifier.predict(X)
+                classification = np.squeeze(self.classifier.predict(X))
                 target.classification = classification
                 print('Classified target {0}, classification: {1}'.format(target, classification))
                 self.send_triggers.check_saving_rules(target, classification)
                 self.classification_count += 1
-                if self.classification_count < config.refit_params['refit_classifier_count']:
+                if self.classification_count < config.refit_classifier_count:
                     self.fit_classifier()
-                    self.target_space.update()
                     self.classification_count = 0
             self.send_triggers.send_triggers_if_ready()

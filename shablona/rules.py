@@ -63,7 +63,7 @@ class SendTriggers:
 
         else:
             # if the current speed is greater than the threshold
-            if ADCP.speed > ADCP_threshold:
+            if ADCP['speed'] > ADCP_threshold:
                 # if the class is interesting
                 if classification in classes_to_save:
                     new_trigs = evaluate_target_range(target, NIMS)
