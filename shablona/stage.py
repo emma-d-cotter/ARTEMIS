@@ -151,6 +151,7 @@ class Stage:
                 self.send_triggers.check_saving_rules(target, None)
                 self.send_triggers.send_triggers_if_ready()
 
+        track_ids_to_remove = []
         for track_id in self.data_queues['nims']:
             # If max_pings or max_time, create/update Target
             ping_count = len(self.data_queues['nims'][track_id])
@@ -164,8 +165,10 @@ class Stage:
                 target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
                                               pamguard=self.data_queues['pamguard'],
                                               adcp=self.data_queues['adcp'])
-                self.data_queues['nims'][track_id] = []
+                track_ids_to_remove.append(track_id)
                 self.processor.addTargetToQueue(target)
+
+        for track_id in track_ids_to_remove: self.data_queues['nims'].pop(track_id)
 
         max_max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
                        config.data_streams_classifier_triggers['nims_max_time'])

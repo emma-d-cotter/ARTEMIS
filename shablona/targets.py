@@ -35,7 +35,7 @@ class Target:
             return None
             #raise ValueError("Table {0} not found in target space. Following tables available:  " \
             #        ' '.join(list(self.target_space.tables.keys())))
-        elif type(self.indices.get(table)) == type(int()):
+        elif self.indices.get(table):
             return dict(zip(headers[table], self.target_space.tables[table][self.indices[table]]))
         else:
             return None
@@ -159,7 +159,8 @@ class TargetSpace:
         indices = []
         for i, target in enumerate(self.tables['nims']):
 
-            if target[-1] != None and self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
+            if target[-1] != None and self.delta_t_in_seconds(datetime.now(),
+                    target[0]) >= config.drop_target_time:
                 target[-1].append(i)
                 indices.extend(target[-1])
 

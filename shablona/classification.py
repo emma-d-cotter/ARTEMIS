@@ -45,7 +45,8 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
 
     weights = []
     # determine weight for each neighbor
-    for i, ind in enumerate(neigh_ind):
+    for i, ind in enumerate(np.squeeze(neigh_ind.tolist())):
+        print("i:", i, "ind:", ind)
         target = target_space.classifier_index_to_target[ind]
         source = target.source
 
@@ -180,7 +181,7 @@ class BackgroundClassifier():
             Class labels for each data sample, along with classification info
         """
         for rule in self.hyperspaces:
-            for i, feature in enumerate(self.classifier_features):
+            for i, feature in enumerate(config.classifier_features):
                 if feature in rule and not _within_interval(X[i], rule[feature]):
                     break
             else:
@@ -292,12 +293,10 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
             classes_ = [self.classes_]
         n_outputs = len(classes_)
 
-        if self.outlier_function is not None:
-            neigh_dist[outliers] = 1e-6
-        elif outliers:
+        if self.outlier_function is None and outliers:
             raise ValueError('No neighbors found for test samples %r, '
                              'you can try using larger radius, '
-                             'give a label for outliers, '
+                             'give a function for outliers, '
                              'or consider removing them from your dataset.'
                              % outliers)
 
