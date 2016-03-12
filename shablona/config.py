@@ -38,11 +38,15 @@ instrument_ranges = {'camera': 8,
 data_streams = ['adcp', 'camera', 'pamguard', 'nims']
 data_streams_classifier_triggers = {'nims_max_pings': 10,
 									'nims_max_time': 1,
-									'pamguard_max_time': 3}
+									'pamguard_max_time': 3} # all in seconds
 
 # This supplies the order and contents for classification features
-classifier_features = ['size', 'speed', 'deltav', 'target_strength', 'time_of_day',
-			'current']
+classifier_features = ['size', 'speed', 'deltav', 'target_strength',
+					   'time_of_day', 'current']
+
+# if no new adcp data after this theshold (in minutes), refit classifier without
+# current and deltav
+adcp_last_seen_threshold = 90
 
 # current threshold below which to ignore targets
 # that do not include a PAMGuard detection
