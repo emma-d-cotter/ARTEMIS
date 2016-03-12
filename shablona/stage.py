@@ -137,42 +137,50 @@ class Stage:
     def processEligibleStagedData(self):
         """Deletes, classifies, or sends data to rules if eligible."""
         # Only try to create new target in potential pamguard only case
-        #while True:
-        if self.data_queues['pamguard'] != []:
-            pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.get_entry_by_index('pamguard',
-                    self.data_queues['pamguard']).get('timestamp') >= datetime.timedelta(
-                    seconds=config.data_streams_classifier_triggers['pamguard_max_time']))
-            if pamguard_exceeds_max_time:
-                target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
-                                              adcp=self.data_queues['adcp'])
-                self.data_queues['pamguard'] = []
-                self.recent_targets.append(target)
-                self.send_triggers.check_saving_rules(target, None)
-                self.send_triggers.send_triggers_if_ready()
+        while True:
+            # determine if ADCP is active
+            adcp_index = self.data_queues['adcp']
+            adcp_last_seen = self.target_space.get_entry_by_index('adcp', adcp_index)['timestamp']
+            adcp_flag = abs(datetime.datetime.now() - adcp_last_seen) > datetime.timedelta(0,60*config.adcp_last_seen_threshold,0)
 
-        track_ids_to_remove = []
-        for track_id in self.data_queues['nims']:
-            # If max_pings or max_time, create/update Target
-            ping_count = len(self.data_queues['nims'][track_id])
-            exceeds_max_pings = (ping_count >=
-                    config.data_streams_classifier_triggers['nims_max_pings'])
-            exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.get_entry_by_index('nims',
-                    self.data_queues['nims'][track_id][-1]).get('timestamp')
-                    >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time']))
-            if exceeds_max_pings or exceeds_max_time:
-                target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
-                                              pamguard=self.data_queues['pamguard'],
-                                              adcp=self.data_queues['adcp'])
-                track_ids_to_remove.append(track_id)
-                self.processor.addTargetToQueue(target)
+            if adcp_flag:
+                raise Exception('ADCP has is no longer updating, cannot classify features.')
 
-        for track_id in track_ids_to_remove: self.data_queues['nims'].pop(track_id)
+            if self.data_queues['pamguard'] != []:
+                pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
+                        self.target_space.get_entry_by_index('pamguard',
+                        self.data_queues['pamguard']).get('timestamp') >= datetime.timedelta(
+                        seconds=config.data_streams_classifier_triggers['pamguard_max_time']))
+                if pamguard_exceeds_max_time:
+                    target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
+                                                  adcp=self.data_queues['adcp'])
+                    self.data_queues['pamguard'] = []
+                    self.recent_targets.append(target)
+                    self.send_triggers.check_saving_rules(target, None)
+                    self.send_triggers.send_triggers_if_ready()
 
-        max_max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
-                       config.data_streams_classifier_triggers['nims_max_time'])
-        for recent_target in self.recent_targets:
-            if (datetime.datetime.utcnow() - recent_target.date).seconds >= max_max_time:
-                # Remove recent target from list
-                self.recent_targets.remove(recent_target)
+            track_ids_to_remove = []
+            for track_id in self.data_queues['nims']:
+                # If max_pings or max_time, create/update Target
+                ping_count = len(self.data_queues['nims'][track_id])
+                exceeds_max_pings = (ping_count >=
+                        config.data_streams_classifier_triggers['nims_max_pings'])
+                exceeds_max_time = (datetime.datetime.utcnow() -
+                        self.target_space.get_entry_by_index('nims',
+                        self.data_queues['nims'][track_id][-1]).get('timestamp')
+                        >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time']))
+                if exceeds_max_pings or exceeds_max_time:
+                    target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
+                                                  pamguard=self.data_queues['pamguard'],
+                                                  adcp=self.data_queues['adcp'])
+                    track_ids_to_remove.append(track_id)
+                    self.processor.addTargetToQueue(target)
+
+            for track_id in track_ids_to_remove: self.data_queues['nims'].pop(track_id)
+
+            max_max_time = max(config.data_streams_classifier_triggers['pamguard_max_time'],
+                           config.data_streams_classifier_triggers['nims_max_time'])
+            for recent_target in self.recent_targets:
+                if (datetime.datetime.utcnow() - recent_target.date).seconds >= max_max_time:
+                    # Remove recent target from list
+                    self.recent_targets.remove(recent_target)
