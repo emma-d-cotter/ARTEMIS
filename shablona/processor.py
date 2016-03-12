@@ -95,6 +95,5 @@ class ClassificationProcessor:
                 self.classification_count += 1
                 if self.classification_count < config.refit_classifier_count:
                     self.fit_classifier()
-                    self.target_space.update()
                     self.classification_count = 0
             self.send_triggers.send_triggers_if_ready()

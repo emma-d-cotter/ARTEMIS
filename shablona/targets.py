@@ -28,6 +28,7 @@ class Target:
 
     def get_entry(self, table):
         """Returns dictionary of table headers and values for given table."""
+        print("self.indices:", self.indices)
         if table not in headers:
             raise ValueError("{0} is an invalid data stream or table name. Valid inputs are " \
                     "'classifier_{features,classifications}' or data stream name.".format(table))
@@ -35,7 +36,7 @@ class Target:
             return None
             #raise ValueError("Table {0} not found in target space. Following tables available:  " \
             #        ' '.join(list(self.target_space.tables.keys())))
-        elif self.indices.get(table):
+        elif self.indices.get(table) != None:
             return dict(zip(headers[table], self.target_space.tables[table][self.indices[table]]))
         else:
             return None
@@ -139,50 +140,44 @@ class TargetSpace:
         #   create classification features from agg_indices.
         self.tables['classifier_features'].append(target.get_classifier_features)
         self.tables['classifier_classifications'].append(target.classification)
-        target.indices['classifier'] = len(self.target_space.tables['classifier_features']) - 1
+        target.indices['classifier'] = len(self.tables['classifier_features']) - 1
 
-    def update(self):
+    def update(self, target):
         """
         remove old targets from target space
         """
-        self.remove_old_nims()
-        self.remove_old_pamguard()
+        self.remove_old_nims(target)
+        self.remove_old_pamguard(target)
         self.remove_old_adcp()
 
-    def remove_old_nims(self):
+    def remove_old_nims(self, target):
         """
         Remove nims data older than drop_target_time. Update minimum
         time of all targets (to avoid dropping relevant ADCP data)
         """
         # remove all targets with nims that have not been seen
         # for drop_target_time seconds
-        indices = []
-        for i, target in enumerate(self.tables['nims']):
-
-            if target[-1] != None and self.delta_t_in_seconds(datetime.now(),
-                    target[0]) >= config.drop_target_time:
-                target[-1].append(i)
-                indices.extend(target[-1])
+        indices = target.get_entry('nims')['aggregate_indices']
+        indices.append(target.indices['nims'])
 
         for index in sorted(indices, reverse = True):
-            self.tables['nims'].pop(index)
+            self.tables['nims'][index] = []
 
-    def remove_old_pamguard(self):
+    def remove_old_pamguard(self, target):
         """
         Remove pamguard data older than drop_target_time. Update minimum
         time of all targets (to avoid dropping relevant ADCP data)
         """
-        for i, target in reversed(list(enumerate(self.tables['pamguard']))):
-            if self.delta_t_in_seconds(datetime.now(), target[0]) >= drop_target_time:
-                del self.tables['pamguard'][i]
+        if target.get_entry('pamguard') != None:
+            if self.delta_t_in_seconds(datetime.now(),
+                    target.get_entry('pamguard')['timestamp']) >= config.drop_target_time:
+                self.tables['pamguard'][target.indices['pamguard']] = []
 
     def remove_old_adcp(self):
         """
         remove all adcp data except for the most recent entry
         """
-        for i, _ in reversed(list(enumerate(self.tables['adcp']))):
-            if i < (len(self.tables['adcp'])-1):
-                self.tables['adcp'].pop(i)
+        self.tables['adcp'] = [self.tables['adcp'][-1]]
 
     # this function is already in code...import?
     def delta_t_in_seconds(self, datetime1, datetime2):

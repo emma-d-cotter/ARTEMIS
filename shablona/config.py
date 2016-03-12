@@ -96,4 +96,4 @@ M3_avgeraging_time = 5 # number of seconds over which to calculate target veloci
 
 # classification refit parameters
 refit_classifier_count = 10
-drop_target_time = 30
+drop_target_time = 30 # s
