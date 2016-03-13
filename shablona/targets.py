@@ -13,6 +13,7 @@ headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
 headers['classifier'] = config.classifier_features
 
 def _get_minutes_since_midnight(timestamp):
+    """"""
     return min(timestamp.hour*60 + timestamp.minute,
         60*24 - (timestamp.hour*60 + timestamp.minute))
 
@@ -28,16 +29,13 @@ class Target:
 
     def get_entry(self, table):
         """Returns dictionary of table headers and values for given table."""
-        print("self.indices:", self.indices)
-        if table not in headers:
-            raise ValueError("{0} is an invalid data stream or table name. Valid inputs are " \
-                    "'classifier_{features,classifications}' or data stream name.".format(table))
-        elif table not in self.target_space.tables:
-            return None
-            #raise ValueError("Table {0} not found in target space. Following tables available:  " \
-            #        ' '.join(list(self.target_space.tables.keys())))
+        if table not in headers or table not in self.target_space.tables:
+            raise ValueError("{0} is an invalid table name. Valid inputs are " \
+                    "'classifier_{features,classifications} or data stream " \
+                    "name.".format(table))
         elif self.indices.get(table) != None:
-            return dict(zip(headers[table], self.target_space.tables[table][self.indices[table]]))
+            return dict(zip(headers[table],
+                            self.target_space.tables[table][self.indices[table]]))
         else:
             return None
 
@@ -88,16 +86,14 @@ class TargetSpace:
         self.classifier_index_to_target = {}
 
     def get_entry_by_index(self, table, index):
-        """Returns dictionary of table headers and values for given index for table."""
-        if table not in headers:
-            raise ValueError("{0} is an invalid data stream or table name. Valid inputs are " \
-                    "'classifier_{features,classifications}' or data stream name.".format(table))
-        elif table not in self.tables:
-            raise ValueError("Table {0} not found in target space. Following tables available: " \
-                    "{1}".format(' '.join(list(self.tables.keys()))))
+        """Returns dictionary of table headers and values for given index."""
+        if table not in headers or table not in self.tables:
+            raise ValueError("{0} is an invalid table name. Valid inputs are " \
+                    "'classifier_{features,classifications}' or data stream " \
+                    "name.".format(table))
         elif index < 0 or index >= len(self.tables[table]):
-            raise ValueError("Invalid index {0}. {1} table is of length {2}.".format(index, table,
-                    len(self.tables[table])))
+            raise ValueError("Invalid table index {0}. {1} table is of length" \
+                    " {2}.".format(index, table, len(self.tables[table])))
         else:
             return dict(zip(headers[table], self.tables[table][index]))
 
