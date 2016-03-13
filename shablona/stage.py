@@ -21,7 +21,6 @@ class Stage:
         # NIMS grouped by target_id, so change to dict {target_id: [indices]}
         self.data_queues['nims'] = {}
         self.recent_targets = []
-        print(self.target_space.tables['adcp'])
         # Adds ADCP (necessary for testing when not connected to ADCP)
         unixtime = (datetime.datetime.utcnow() - datetime.datetime(1970,1,1))
         self.addDataToStage('adcp', [unixtime.days*24*60*60 + unixtime.seconds, 1.2, 4.5])
@@ -69,8 +68,8 @@ class Stage:
         stream-specific queue.
         """
         if stream not in config.data_streams:
-            raise ValueError("Error adding data to stage. Stream {0} not \
-                              defined in config file.".format(stream))
+            raise ValueError("Error adding data to stage. Data stream {0} not" \
+                             " defined in config file.".format(stream))
         stage_indices = self.processDataBeforeStage(stream, data)
         if stream == 'nims':  # indexed
             for track_id in stage_indices:
