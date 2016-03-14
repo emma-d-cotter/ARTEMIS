@@ -21,7 +21,6 @@ class Stage:
         # NIMS grouped by target_id, so change to dict {target_id: [indices]}
         self.data_queues['nims'] = {}
         self.recent_targets = []
-        print(self.target_space.tables['adcp'])
         # Adds ADCP (necessary for testing when not connected to ADCP)
         unixtime = (datetime.datetime.utcnow() - datetime.datetime(1970,1,1))
         self.addDataToStage('adcp', [unixtime.days*24*60*60 + unixtime.seconds, 1.2, 4.5])
@@ -69,8 +68,8 @@ class Stage:
         stream-specific queue.
         """
         if stream not in config.data_streams:
-            raise ValueError("Error adding data to stage. Stream {0} not \
-                              defined in config file.".format(stream))
+            raise ValueError("Error adding data to stage. Data stream {0} not" \
+                             " defined in config file.".format(stream))
         stage_indices = self.processDataBeforeStage(stream, data)
         if stream == 'nims':  # indexed
             for track_id in stage_indices:
@@ -93,7 +92,7 @@ class Stage:
                 # Data not captured in any other Targets, create a new one
                 target_out = Target(target_space=self.target_space,
                               source=config.site_name + "_auto",
-                              date=self.target_space.get_entry_by_index('pamguard', pamguard)['timestamp'],
+                              date=self.target_space.get_entry_value_by_index('pamguard', pamguard, 'timestamp'),
                               indices={'pamguard': pamguard, 'adcp': adcp})
                 target_out.update_classifier_table
                 self.recent_targets.append(target_out)
@@ -184,9 +183,16 @@ class Stage:
 
         for recent_target in self.recent_targets:
             if (datetime.datetime.utcnow() - recent_target.date).seconds >= config.drop_target_time:
-                # Update classifier features list
-                self.target_space.update_classifier_tables(recent_target)
                 # Remove recent target from list
                 self.recent_targets.remove(recent_target)
+                # Processes any stage data remaining
+                rt_nims_id = recent_target.get_entry_value('nims','id')
+                new_target = self.createOrUpdateTarget(adcp=self.data_queues['adcp'],
+                        pamguard=self.data_queues['pamguard'],
+                        nims=self.data_queues['nims'].get(rt_nims_id))
+                if self.data_queues['nims'].get(rt_nims_id):
+                    self.processor.addTargetToQueue(new_target)
+                # Update classifier features list
+                self.target_space.update_classifier_tables(recent_target)
                 # Clear nims and pamguard
                 self.target_space.update(recent_target)
