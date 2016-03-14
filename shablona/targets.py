@@ -176,8 +176,7 @@ class TargetSpace:
         time of all targets (to avoid dropping relevant ADCP data)
         """
         if target.get_entry('pamguard') != None:
-            if self.delta_t_in_seconds(datetime.now(),
-                    target.get_entry_value('pamguard', 'timestamp') >= config.drop_target_time:
+            if self.delta_t_in_seconds(datetime.now(), target.get_entry_value('pamguard', 'timestamp')) >= config.drop_target_time:
                 self.tables['pamguard'][target.indices['pamguard']] = []
 
     def remove_old_adcp(self):
