@@ -19,7 +19,7 @@ def _get_minutes_since_midnight(timestamp):
 
 class Target:
     """"""
-    def __init__(self, target_space, source="Unknown", firstseen=datetime.utcnow(),lastseen=datetime.utcnow(),
+    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(),
                  classification=None, indices={}):
         self.target_space = target_space
         self.source = source

@@ -37,6 +37,7 @@ class Stage:
             data = [datetime.datetime.fromtimestamp(data[0]), data[1], data[2]]
             self.target_space.tables[stream].append(data)
             print(self.target_space.tables[stream])
+            # return next empy index
             return len(self.target_space.tables[stream]) - 1
         elif stream == 'pamguard':
             # comm format matches desired, no need to change
