@@ -183,9 +183,16 @@ class Stage:
 
         for recent_target in self.recent_targets:
             if (datetime.datetime.utcnow() - recent_target.date).seconds >= config.drop_target_time:
-                # Update classifier features list
-                self.target_space.update_classifier_tables(recent_target)
                 # Remove recent target from list
                 self.recent_targets.remove(recent_target)
+                # Processes any stage data remaining
+                rt_nims_id = recent_target.get_entry_value('nims','id')
+                new_target = self.createOrUpdateTarget(adcp=self.data_queues['adcp'],
+                        pamguard=self.data_queues['pamguard'],
+                        nims=self.data_queues['nims'].get(rt_nims_id))
+                if self.data_queues['nims'].get(rt_nims_id):
+                    self.processor.addTargetToQueue(new_target)
+                # Update classifier features list
+                self.target_space.update_classifier_tables(recent_target)
                 # Clear nims and pamguard
                 self.target_space.update(recent_target)

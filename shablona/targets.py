@@ -36,8 +36,12 @@ class Target:
         elif self.indices.get(table) != None:
             return dict(zip(headers[table],
                             self.target_space.tables[table][self.indices[table]]))
-        else:
-            return None
+
+    def get_entry_value(self, table, key):
+        """Returns specific value from Target.get_entry() to avoid None issues."""
+        entry = self.get_entry(table)
+        if entry != None and key in entry:
+            return entry.get(key)
 
     def update_entry(self, table, indices):
         """Rules to update an existing target entry with
@@ -96,6 +100,12 @@ class TargetSpace:
                     " {2}.".format(index, table, len(self.tables[table])))
         else:
             return dict(zip(headers[table], self.tables[table][index]))
+
+    def get_entry_value_by_index(self, table, index, key):
+        """Returns value for specific key in table entry."""
+        entry = self.get_entry_by_index(table, index)
+        if entry != None and key in entry:
+            return entry.get(key)
 
     def combine_entries(self, table, indices):
         """Expects indices to be in order of read. That is, last
