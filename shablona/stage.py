@@ -37,12 +37,17 @@ class Stage:
             data = [datetime.datetime.fromtimestamp(data[0]), data[1], data[2]]
             self.target_space.tables[stream].append(data)
             print(self.target_space.tables[stream])
-            # return next empy index
-            return len(self.target_space.tables[stream]) - 1
+            if [] in self.target_space.tables[stream]:
+                return self.target_space.tables[stream].index([])
+            else:
+                return len(self.target_space.tables[stream]) - 1
         elif stream == 'pamguard':
             # comm format matches desired, no need to change
             self.target_space.tables[stream].append(data)
-            return len(self.target_space.tables[stream]) - 1
+            if [] in self.target_space.tables[stream]:
+                return self.target_space.tables[stream].index([])
+            else:
+                return len(self.target_space.tables[stream]) - 1
         elif stream == 'nims':
             indices = {}
             timestamp = data[0]
@@ -54,7 +59,10 @@ class Stage:
                         track['max_range_m'], track['last_pos_angle'],
                         track['last_pos_range'], None]
                 self.target_space.tables[stream].append(new_data)
-                indices[track['id']] = len(self.target_space.tables[stream]) - 1
+                if [] in self.target_space.tables[stream]:
+                    indices[track['id']] = self.target_space.tables[stream].index([])
+                else:
+                    indices[track['id']] = len(self.target_space.tables[stream]) - 1
         elif stream in config.data_streams:
             raise ValueError("No stage processing functionality exists for" \
                              " data stream {0}.".format(stream))
