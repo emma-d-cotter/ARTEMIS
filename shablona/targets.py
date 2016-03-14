@@ -19,7 +19,7 @@ def _get_minutes_since_midnight(timestamp):
 
 class Target:
     """"""
-    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(),
+    def __init__(self, target_space, source="Unknown", firstseen=datetime.utcnow(),lastseen=datetime.utcnow(),
                  classification=None, indices={}):
         self.target_space = target_space
         self.source = source
@@ -144,7 +144,7 @@ class TargetSpace:
         #   store updated features but with an old classification.
         #   A potential solution may be to store the number of pings used to
         #   create classification features from agg_indices.
-        self.tables['classifier_features'].append(target.get_classifier_features)
+        self.tables['classifier_features'].append(target.get_classifier_features())
         self.tables['classifier_classifications'].append(target.classification)
         target.indices['classifier'] = len(self.tables['classifier_features']) - 1
 
@@ -168,7 +168,8 @@ class TargetSpace:
 
         for index in sorted(indices, reverse = True):
             self.tables['nims'][index] = []
-            target.indices.pop('nims')
+
+        target.indices.pop('nims')
 
     def remove_old_pamguard(self, target):
         """
