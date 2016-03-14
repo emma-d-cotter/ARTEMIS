@@ -163,11 +163,12 @@ class TargetSpace:
         """
         # remove all targets with nims that have not been seen
         # for drop_target_time seconds
-        indices = target.get_entry('nims')['aggregate_indices']
+        indices = target.get_entry_value('nims', 'aggregate_indices')
         indices.append(target.indices['nims'])
 
         for index in sorted(indices, reverse = True):
             self.tables['nims'][index] = []
+            target.indices.pop('nims')
 
     def remove_old_pamguard(self, target):
         """
@@ -176,7 +177,7 @@ class TargetSpace:
         """
         if target.get_entry('pamguard') != None:
             if self.delta_t_in_seconds(datetime.now(),
-                    target.get_entry('pamguard')['timestamp']) >= config.drop_target_time:
+                    target.get_entry_value('pamguard', 'timestamp') >= config.drop_target_time:
                 self.tables['pamguard'][target.indices['pamguard']] = []
 
     def remove_old_adcp(self):

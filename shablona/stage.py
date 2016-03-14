@@ -92,7 +92,7 @@ class Stage:
                 # Data not captured in any other Targets, create a new one
                 target_out = Target(target_space=self.target_space,
                               source=config.site_name + "_auto",
-                              date=self.target_space.get_entry_by_index('pamguard', pamguard)['timestamp'],
+                              date=self.target_space.get_entry_value_by_index('pamguard', pamguard, 'timestamp'),
                               indices={'pamguard': pamguard, 'adcp': adcp})
                 target_out.update_classifier_table
                 self.recent_targets.append(target_out)
