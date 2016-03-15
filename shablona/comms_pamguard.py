@@ -39,7 +39,7 @@ def PAMGuard_read(stage_instance, udp_IP = "",udp_port = 8000,buff_size = 1024,t
                 timestamp = datetime.datetime.utcnow()
 
                 pamguard_data = [timestamp, detection]
-                stage_instance.addDataToPrestage('pamguard', pamguard_data)
+                stage_instance.addDataToStage('pamguard', pamguard_data)
 
                 print("PAMGuard Detection of type: ", detection)
                 del data
