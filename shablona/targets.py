@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import math
 import config
 
 
@@ -73,10 +73,166 @@ class Target:
         adcp_entry = self.get_entry('adcp')
         return [nims_entry['size_sq_m'],  # size
                 nims_entry['speed_mps'],  # speed
-                0,  # deltav
+                self.calculate_deltav(),  # deltav
                 nims_entry['target_strength'],  # target_strength
                 _get_minutes_since_midnight(nims_entry['timestamp']),  # time_of_day
                 adcp_entry['speed']]  # current
+
+    def calculate_deltav(self):
+        """
+        Calculates "delta_v" for classification given a target.
+
+        Delta_v is the norm of the difference between the current velocity
+        and the target velocity. This function returns the maximum delta_v
+        calculated for the target. Target velocity is calculated at intervals
+        of M3_averaging_time
+
+        i.e. if M3_averaging_time is 1 second, and a target was detected every
+        ping at 10 Hz for 5 seconds, the velocity would be calculated 5 times.
+
+        The most recent ADCP data at the time of target detection is used to
+        calculate delta_v.
+        """
+        pass
+        # extract target data
+        nims_indices = self.get_entry('nims')['aggregate_indices']
+        adcp = self.get_entry('adcp')
+
+        # sort nims data by timestamp
+        sorted(nims_indices,
+               key = lambda x: self.target_space.get_entry_by_index('nims', x)['timestamp'])
+
+        # extract all targets from nims data
+        targets = self.extract_targets(nims_indices)
+
+        points_to_avg = []
+        index = 0
+        # determine points between which to calculate velocity (must have at least
+        # M3_averaging_time between the timestamps)
+        while index < (len(targets)-1):
+            start_time = targets[index]['timestamp']
+
+            for i, target in enumerate(targets):
+                # add to points_to_avg if the difference in time between
+                # target sightings is greater than the M3_averaging_time
+                diff = self.delta_t_in_seconds(target['timestamp'], start_time)
+
+                if diff >= config.M3_avgeraging_time:
+                    points_to_avg.append(targets[i])
+                    index = i
+                    break
+
+                if i >= (len(targets)-1):
+                    # if the target was less than the M3_averaging_time, use first
+                    # and last points
+                    index = i
+                    points_to_avg.append(targets[0])
+                    points_to_avg.append(targets[-1])
+                    break
+
+        delta_v = self.calc_delta_v(points_to_avg, adcp)
+
+        return max(delta_v)
+
+
+    def velocity_between_two_points(self, point1, point2):
+        """
+        Determines magnitude and direction of target trajectory (from point 1 to point 2)
+
+        Inputs:
+        point 1, point 2 = points where target was detected, in list format [range, bearing in degrees]
+        AMP_heading = heading of AMP, in radians from due north
+        M3_swath = list containing minimum and maximum angle ( in degrees) for M3 target
+                   detection. Default is 0 --> 120 degrees
+
+        Outputs:
+        vel = [velocity magnitude, velocity direction]
+        """
+
+        point1_cartesian = self.transform_NIMS_to_vector(point1)
+        point2_cartesian = self.transform_NIMS_to_vector(point2)
+
+        dt = self.delta_t_in_seconds(point1['timestamp'], point2['timestamp'])
+
+        # subtract 2-1 to get velocity
+        vel = [(point2_cartesian[0] - point1_cartesian[0])/dt,
+               (point2_cartesian[1] - point1_cartesian[1])/dt]
+
+        return(vel)
+
+
+    def transform_NIMS_to_vector(self, point):
+        """
+        Transform NIMS detection (in format [range, bearing in degrees]) to earth coordinates (East-North)
+
+        Returns X-Y coordinates of point after transformation.
+        """
+        # convert target heading to radians, and shift such that zero degrees is center of swath
+        point_heading = (point['last_pos_angle'] - (config.M3_swath[1] - config.M3_swath[0])/2) * pi/180
+
+        # convert bearing to angle from due N by subtracting AMP angle
+        point_heading = point_heading - config.AMP_heading
+
+        # get vector components for point 1 and 2
+        point_cartesian = [point['last_pos_range'] * math.cos(point_heading),
+                           point['last_pos_range'] * math.sin(point_heading)]
+
+        return(point_cartesian)
+
+
+    def delta_t_in_seconds(self, datetime1, datetime2):
+        """
+        calculate delta t in seconds between two datetime objects
+        (returns absolute value, so order of dates is insignifigant)
+        """
+        delta_t = datetime1 - datetime2
+        days_s = delta_t.days*(86400)
+        microseconds_s = delta_t.microseconds/1000000
+        delta_t_s = days_s + delta_t.seconds + microseconds_s
+
+        return abs(delta_t_s)
+
+
+    def extract_targets(self, nims_indices):
+        """
+        Extract all targets from nims data
+        """
+
+        targets = []
+        for index in nims_indices:
+            targets.append(self.target_space.get_entry_by_index('nims', index))
+
+        return targets
+
+    def calc_delta_v(self, points_to_avg, adcp):
+        """
+        returns delta v between all selected points and ADCP
+        """
+        # convert ADCP to cartesian coordinates
+        velocity_adcp = [adcp['speed'] * math.cos(adcp['heading']),
+                         adcp['speed'] * math.sin(adcp['heading'])]
+
+        delta_v = []
+        for i, target in enumerate(points_to_avg):
+
+            # calculate delta_v between two consecutive points
+            point1 = points_to_avg[i]
+
+            try:
+                point2 = points_to_avg[i+1]
+            except:
+                break
+
+            # velocity of target between point 1 and point 2
+            velocity_target = self.velocity_between_two_points(point1, point2)
+            # difference between target and adcp velocity
+            velocity_diff = [velocity_target[0]-velocity_adcp[0],
+                             velocity_target[1]-velocity_adcp[1]]
+            # "delta_v" is magnitude of velocity difference
+            delta_v.append((velocity_diff[0]**2 + velocity_diff[1]**2)**0.5)
+
+            return(delta_v)
+
 
 class TargetSpace:
     """"""
