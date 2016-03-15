@@ -64,19 +64,12 @@ class Target:
 
     def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
-        if self.indices.get('classifier') == None:
-            index = len(self.target_space.tables['classifier_features'])
-            self.indices['classifier'] = index
-        else:
-            index = self.indices['classifier']
-        nims_entry = self.get_entry('nims')
-        adcp_entry = self.get_entry('adcp')
-        return [nims_entry['size_sq_m'],  # size
-                nims_entry['speed_mps'],  # speed
+        return [self.get_entry_value('nims', 'size_sq_m'),  # size
+                self.get_entry_value('nims', 'speed_mps'),  # speed
                 0,  # deltav
-                nims_entry['target_strength'],  # target_strength
-                _get_minutes_since_midnight(nims_entry['timestamp']),  # time_of_day
-                adcp_entry['speed']]  # current
+                self.get_entry_value('nims','target_strength'),  # target_strength
+                _get_minutes_since_midnight(self.get_entry_value('nims','timestamp')),  # time_of_day
+                self.get_entry_value('adcp', 'speed')]  # current
 
 class TargetSpace:
     """"""
@@ -88,6 +81,15 @@ class TargetSpace:
         self.tables['classifier_features'] = []
         self.tables['classifier_classifications'] = []
         self.classifier_index_to_target = {}
+
+    def append_entry(self, table, data):
+        for i, entry in enumerate(self.tables[table]):
+            if entry == []:
+                self.tables[table][i] = data
+                return i
+        else:
+            self.tables[table].append(data)
+            return len(self.tables[table]) - 1
 
     def get_entry_by_index(self, table, index):
         """Returns dictionary of table headers and values for given index."""

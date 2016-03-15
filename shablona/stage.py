@@ -35,19 +35,10 @@ class Stage:
         """
         if stream == 'adcp':
             data = [datetime.datetime.fromtimestamp(data[0]), data[1], data[2]]
-            self.target_space.tables[stream].append(data)
-            print(self.target_space.tables[stream])
-            if [] in self.target_space.tables[stream]:
-                return self.target_space.tables[stream].index([])
-            else:
-                return len(self.target_space.tables[stream]) - 1
+            indices = self.target_space.append_entry(stream, data)
         elif stream == 'pamguard':
             # comm format matches desired, no need to change
-            self.target_space.tables[stream].append(data)
-            if [] in self.target_space.tables[stream]:
-                return self.target_space.tables[stream].index([])
-            else:
-                return len(self.target_space.tables[stream]) - 1
+            indices = self.target_space.append_entry(stream, data)
         elif stream == 'nims':
             indices = {}
             timestamp = data[0]
@@ -58,11 +49,7 @@ class Stage:
                         track['min_angle_m'], track['min_range_m'], track['max_angle_m'],
                         track['max_range_m'], track['last_pos_angle'],
                         track['last_pos_range'], None]
-                self.target_space.tables[stream].append(new_data)
-                if [] in self.target_space.tables[stream]:
-                    indices[track['id']] = self.target_space.tables[stream].index([])
-                else:
-                    indices[track['id']] = len(self.target_space.tables[stream]) - 1
+                indices[track['id']] = self.target_space.append_entry(stream, new_data)
         elif stream in config.data_streams:
             raise ValueError("No stage processing functionality exists for" \
                              " data stream {0}.".format(stream))
@@ -107,8 +94,9 @@ class Stage:
                 self.recent_targets.append(target_out)
                 return target_out
         elif nims != [] and nims[1] != []:
+            print("nims[0]:", nims[0], "nims[1]:", nims[1])
             for target in self.recent_targets:
-                if target.get_entry('nims')['id'] == nims[0]:
+                if target.get_entry_value('nims', 'id') == nims[0]:
                     # There's an existing target with that id, update that Target object
                     target.update_entry('nims', nims[1])
                     return target
@@ -152,7 +140,7 @@ class Stage:
         #while True:
         # determine if ADCP is active
         adcp_index = self.data_queues['adcp']
-        adcp_last_seen = self.target_space.get_entry_by_index('adcp', adcp_index)['timestamp']
+        adcp_last_seen = self.target_space.get_entry_value_by_index('adcp', adcp_index, 'timestamp')
         adcp_flag = abs(datetime.datetime.now() - adcp_last_seen) > datetime.timedelta(0,60*config.adcp_last_seen_threshold,0)
 
         if adcp_flag:
@@ -160,8 +148,8 @@ class Stage:
 
         if self.data_queues['pamguard'] != []:
             pamguard_exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.get_entry_by_index('pamguard',
-                    self.data_queues['pamguard']).get('timestamp') >= datetime.timedelta(
+                    self.target_space.get_entry_value_by_index('pamguard',
+                    self.data_queues['pamguard'],'timestamp') >= datetime.timedelta(
                     seconds=config.data_streams_classifier_triggers['pamguard_max_time']))
             if pamguard_exceeds_max_time:
                 target = createOrUpdateTarget(pamguard=self.data_queues['pamguard'],
@@ -178,8 +166,8 @@ class Stage:
             exceeds_max_pings = (ping_count >=
                     config.data_streams_classifier_triggers['nims_max_pings'])
             exceeds_max_time = (datetime.datetime.utcnow() -
-                    self.target_space.get_entry_by_index('nims',
-                    self.data_queues['nims'][track_id][-1]).get('timestamp')
+                    self.target_space.get_entry_value_by_index('nims',
+                    self.data_queues['nims'][track_id][-1], 'timestamp')
                     >= datetime.timedelta(seconds=config.data_streams_classifier_triggers['nims_max_time']))
             if exceeds_max_pings or exceeds_max_time:
                 target = self.createOrUpdateTarget(nims=(track_id, self.data_queues['nims'][track_id]),
@@ -192,12 +180,11 @@ class Stage:
 
         for recent_target in self.recent_targets:
             if (datetime.datetime.utcnow() - recent_target.date).seconds >= config.drop_target_time:
-                print('time is greater than drop target time')
+                print('Start removal process for Target:', recent_target.indices)
                 # Remove recent target from list
                 self.recent_targets.remove(recent_target)
                 # Processes any stage data remaining
                 rt_nims_id = recent_target.get_entry_value('nims','id')
-                print(self.data_queues['nims'].get(rt_nims_id))
                 #if self.data_queues['nims'].get(rt_nims_id):
                 #    new_target = self.createOrUpdateTarget(adcp=self.data_queues['adcp'],
                 #            pamguard=self.data_queues['pamguard'],
