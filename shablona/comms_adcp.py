@@ -119,4 +119,4 @@ def process_ADCP(stage_instance, currents, header):
 
     adcp_data = [timestamp, speed, heading]
 
-    stage_instance.addDataToStage('adcp', adcp_data)
+    stage_instance.addDataToPrestage('adcp', adcp_data)

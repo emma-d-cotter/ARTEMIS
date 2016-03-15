@@ -33,7 +33,7 @@ def get_tracks(stage_instance, buffer):
 
         # TODO - ask NIMS to send timestamp with ping number
         timestamp = datetime.datetime.utcnow()
-        stage_instance.addDataToStage('nims',
+        stage_instance.addDataToPrestage('nims',
                                       [timestamp, nims_data['tracks']])
 
 def read_tracks(stage_instance):
