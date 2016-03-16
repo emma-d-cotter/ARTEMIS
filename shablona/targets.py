@@ -53,14 +53,11 @@ class Target:
         """
         if table == 'nims':
             old_index = self.indices[table]
-            indices.insert(0,old_index)
+            indices.append(old_index)
             old_entry = self.get_entry(table)
-            if old_entry['aggregate_indices'] == None:
-                location = len(self.target_space.tables[table])
-            else:
-                location = old_index
+            assert(old_entry['aggregate_indices'] != None)
             new_entry = self.target_space.combine_entries(table, indices)
-            self.target_space.tables[table][location] = new_entry
+            self.target_space.tables[table][old_index] = new_entry
 
     def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
@@ -148,7 +145,9 @@ class TargetSpace:
         #   create classification features from agg_indices.
         self.tables['classifier_features'].append(target.get_classifier_features())
         self.tables['classifier_classifications'].append(target.classification)
-        target.indices['classifier'] = len(self.tables['classifier_features']) - 1
+        index = len(self.tables['classifier_features']) - 1
+        target.indices['classifier'] = index
+        self.classifier_index_to_target[index] = target
 
     def update(self, target):
         """
