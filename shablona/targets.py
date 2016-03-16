@@ -53,30 +53,20 @@ class Target:
         """
         if table == 'nims':
             old_index = self.indices[table]
-            indices.insert(0,old_index)
+            indices.append(old_index)
             old_entry = self.get_entry(table)
-            if old_entry['aggregate_indices'] == None:
-                location = len(self.target_space.tables[table])
-            else:
-                location = old_index
+            assert(old_entry['aggregate_indices'] != None)
             new_entry = self.target_space.combine_entries(table, indices)
-            self.target_space.tables[table][location] = new_entry
+            self.target_space.tables[table][old_index] = new_entry
 
     def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
-        if self.indices.get('classifier') == None:
-            index = len(self.target_space.tables['classifier_features'])
-            self.indices['classifier'] = index
-        else:
-            index = self.indices['classifier']
-        nims_entry = self.get_entry('nims')
-        adcp_entry = self.get_entry('adcp')
-        return [nims_entry['size_sq_m'],  # size
-                nims_entry['speed_mps'],  # speed
+        return [self.get_entry_value('nims', 'size_sq_m'),  # size
+                self.get_entry_value('nims', 'speed_mps'),  # speed
                 self.calculate_deltav(),  # deltav
-                nims_entry['target_strength'],  # target_strength
-                _get_minutes_since_midnight(nims_entry['timestamp']),  # time_of_day
-                adcp_entry['speed']]  # current
+                self.get_entry_value('nims','target_strength'),  # target_strength
+                _get_minutes_since_midnight(self.get_entry_value('nims','timestamp')),  # time_of_day
+                self.get_entry_value('adcp', 'speed')]  # current
 
     def calculate_deltav(self):
         """
@@ -245,6 +235,15 @@ class TargetSpace:
         self.tables['classifier_classifications'] = []
         self.classifier_index_to_target = {}
 
+    def append_entry(self, table, data):
+        for i, entry in enumerate(self.tables[table]):
+            if entry == []:
+                self.tables[table][i] = data
+                return i
+        else:
+            self.tables[table].append(data)
+            return len(self.tables[table]) - 1
+
     def get_entry_by_index(self, table, index):
         """Returns dictionary of table headers and values for given index."""
         if table not in headers or table not in self.tables:
@@ -302,7 +301,9 @@ class TargetSpace:
         #   create classification features from agg_indices.
         self.tables['classifier_features'].append(target.get_classifier_features())
         self.tables['classifier_classifications'].append(target.classification)
-        target.indices['classifier'] = len(self.tables['classifier_features']) - 1
+        index = len(self.tables['classifier_features']) - 1
+        target.indices['classifier'] = index
+        self.classifier_index_to_target[index] = target
 
     def update(self, target):
         """
