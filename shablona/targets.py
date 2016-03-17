@@ -83,7 +83,6 @@ class Target:
         The most recent ADCP data at the time of target detection is used to
         calculate delta_v.
         """
-        pass
         # extract target data
         nims_indices = self.get_entry('nims')['aggregate_indices']
         if len(nims_indices) > 1:
@@ -91,38 +90,33 @@ class Target:
             adcp = self.get_entry('adcp')
 
             # sort nims data by timestamp
-            sorted(nims_indices,
-                   key = lambda x: self.target_space.get_entry_by_index('nims', x)['timestamp'])
+            #nims_indices = sorted(nims_indices,
+            #       key = lambda x: self.target_space.get_entry_by_index('nims', x)['timestamp'])
 
             # extract all targets from nims data
             targets = self.extract_targets(nims_indices)
 
-            points_to_avg = []
+            points_to_avg = [targets[0]]
             index = 0
             # determine points between which to calculate velocity (must have at least
             # M3_averaging_time between the timestamps)
-            while index < (len(targets)-1):
-                start_time = targets[index]['timestamp']
+            start_time = targets[index]['timestamp']
+            for i, target in enumerate(targets):
+                # add to points_to_avg if the difference in time between
+                # target sightings is greater than the M3_averaging_time
+                diff = self.delta_t_in_seconds(target['timestamp'], start_time)
 
-                for i, target in enumerate(targets):
-                    # add to points_to_avg if the difference in time between
-                    # target sightings is greater than the M3_averaging_time
-                    diff = self.delta_t_in_seconds(target['timestamp'], start_time)
+                if diff >= config.M3_avgeraging_time:
+                    points_to_avg.append(targets[i])
+                    index = i
+                    start_time = targets[index]['timestamp']
 
-                    if diff >= config.M3_avgeraging_time:
-                        points_to_avg.append(targets[i])
-                        index = i
-                        break
+                if i >= (len(targets)-1):
+                    points_to_avg.append(targets[i])
+                    index = i
 
-                    if i >= (len(targets)-1):
-                        # if the target was less than the M3_averaging_time, use first
-                        # and last points
-                        index = i
-                        points_to_avg.append(targets[0])
-                        points_to_avg.append(targets[-1])
-                        break
-            print(points_to_avg)
             delta_v = self.calc_delta_v(points_to_avg, adcp)
+            print('max deltav: ',max(delta_v))
             return max(delta_v)
         else:
             # should calculate first ping using NIMS velocity
