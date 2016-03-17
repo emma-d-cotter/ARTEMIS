@@ -47,7 +47,7 @@ class SendTriggers:
                                 in range
         """
 
-        classes_to_save = [1,2,3]
+        classes_to_save = ['1','2','3']
         PAMGuard = target.get_entry('pamguard')
         ADCP = target.get_entry('adcp')
         NIMS = target.get_entry('nims')
@@ -59,23 +59,29 @@ class SendTriggers:
                 new_trigs = ['hydrophones']
             # if there is any detection from NIMS, save all instruments
             else:
-                new_trigs = ['hydrophones', 'M3', 'blueview', 'cameras']
+                new_trigs = ['hydrophones', 'm3', 'blueview', 'cameras']
 
         else:
             # if the current speed is greater than the threshold
             if ADCP['speed'] > ADCP_threshold:
+                print('ADCP Speed > threshold')
                 # if the class is interesting
+                print('classification: ', classification)
+                print(type(classification))
+                print('classes_to_save: ', classes_to_save)
                 if classification in classes_to_save:
-                    new_trigs = evaluate_target_range(target, NIMS)
+                    print('classification in classes_to_save')
+                    new_trigs = self.evaluate_target_range(target)
                 else:
                     new_trigs = []
             else:
                 new_trigs = []
+                print('ADCP Speed < Threshold')
+
 
         # add any new triggers to trigger_status list
         for inst in new_trigs:
-            self.trigger_status[unsent_trigs][inst].append(timestamp)
-
+            self.trigger_status['unsent_trigs'][inst].append(datetime.utcnow())
 
     def evaluate_target_range(self, target):
         """
@@ -89,7 +95,7 @@ class SendTriggers:
         NIMS = target.get_entry('nims')
         target_min_range = NIMS['min_range_m']
 
-        new_trigs = ['hydrophones', 'M3']
+        new_trigs = ['hydrophones', 'm3']
 
         if target_min_range > instrument_ranges['camera']:
             new_trigs += 'camera'
@@ -104,12 +110,10 @@ class SendTriggers:
         """
         Determine what, if any save triggers to send to LabView, and send over UDP.
         """
-
         trigs_to_send = []
 
         # TODO: replace this with timestamp from actual target
         timestamp = datetime.utcnow()
-
         unsent_trigs = self.trigger_status['unsent_trigs']
         last_trigger = self.trigger_status['last_trigger']
         buffer_overlap = saving_parameters['buffer_overlap']
@@ -122,24 +126,24 @@ class SendTriggers:
                 # calculate elapsed time since the target was detected
                 time_since_detection = self.delta_t_in_seconds(
                     timestamp, unsent_trigs[inst][0])
-                print(time_since_detection, ' seconds since last ', inst, ' detection')
+                #print(time_since_detection, ' seconds since last ', inst, ' detection')
 
                 # calculate elapsed time since the last trigger for this instrument
                 time_since_last_trigger = self.delta_t_in_seconds(
                     timestamp, last_trigger[inst])
-                print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
+                #print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
 
                 # Determine if more time than "wait_before_send" (from config)
                 # has elapsed since detection.
                 if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
-
+                    print('time_since_detection >= instrument_buffer_sizes[inst] - time_before_target')
                     # Determine if sufficient time has passed since last trigger
                     # was sent to inst to create an overlap of "buffer_overlap"
                     # (from config) in the saved data
                     if time_since_last_trigger >= (
                         instrument_buffer_sizes[inst] - buffer_overlap):
-
-                        del unsent_trigs[inst][0]
+                        print('time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap)')
+                        unsent_trigs[inst].pop(0)
                         trigs_to_send.append(inst)
                         last_trigger[inst] = timestamp
 
@@ -150,7 +154,7 @@ class SendTriggers:
                                 last_trigger[inst], unsent_trigs[inst][index])
 
                             if time_since_detection < min_time_between_targets:
-                                del unsent_trigs[inst][index]
+                                unsent_trigs[inst].pop(index)
 
         # send triggers over socket!
         if trigs_to_send:
@@ -207,6 +211,8 @@ class SendTriggers:
                 msg += '0 '
 
         msg += 'ZZZZ'
+
+        print('sent message:', msg)
         msg = bytes(msg, 'utf-8')
 
         bytes_sent = self.sock.sendto(msg, (self.udp_IP, self.udp_port))
