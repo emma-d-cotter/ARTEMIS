@@ -58,7 +58,8 @@ class ClassificationProcessor:
 
                         instance = targets.Target(self.target_space,
                                           source=record['source'],
-                                          date=record['date'])
+                                          firstseen=record['date'],
+                                          lastseen=record['date'])
                         index = len(self.target_space.tables['classifier_features'])
                         assert(len(self.target_space.tables['classifier_features'])
                                 == len(self.target_space.tables['classifier_classifications']))
