@@ -87,6 +87,7 @@ class Target:
         # extract target data
         nims_indices = self.get_entry('nims')['aggregate_indices']
         if len(nims_indices) > 1:
+            print("calculating deltav for: ", nims_indices)
             adcp = self.get_entry('adcp')
 
             # sort nims data by timestamp
@@ -120,13 +121,12 @@ class Target:
                         points_to_avg.append(targets[0])
                         points_to_avg.append(targets[-1])
                         break
-
+            print(points_to_avg)
             delta_v = self.calc_delta_v(points_to_avg, adcp)
-            print('delta v for all pts: ', delta_v)
             return max(delta_v)
         else:
+            # should calculate first ping using NIMS velocity
             return 0
-
 
     def velocity_between_two_points(self, point1, point2):
         """
