@@ -73,7 +73,7 @@ class SendTriggers:
 
         # add any new triggers to trigger_status list
         for inst in new_trigs:
-            self.trigger_status['unsent_trigs'][inst].append(target.date)
+            self.trigger_status['unsent_trigs'][inst].append(target.firstseen)
 
     def evaluate_target_range(self, target):
         """
