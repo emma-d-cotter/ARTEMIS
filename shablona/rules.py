@@ -44,7 +44,7 @@ class SendTriggers:
                                 Yes:            No:
                                 Save            save none
                                 instruments
-                                in range
+                                in range + PAM
         """
 
         classes_to_save = ['1','2','3']
@@ -64,20 +64,12 @@ class SendTriggers:
         else:
             # if the current speed is greater than the threshold
             if ADCP['speed'] > ADCP_threshold:
-                print('ADCP Speed > threshold')
-                # if the class is interesting
-                print('classification: ', classification)
-                print(type(classification))
-                print('classes_to_save: ', classes_to_save)
                 if classification in classes_to_save:
-                    print('classification in classes_to_save')
                     new_trigs = self.evaluate_target_range(target)
                 else:
                     new_trigs = []
             else:
                 new_trigs = []
-                print('ADCP Speed < Threshold')
-
 
         # add any new triggers to trigger_status list
         for inst in new_trigs:
@@ -126,23 +118,21 @@ class SendTriggers:
                 # calculate elapsed time since the target was detected
                 time_since_detection = self.delta_t_in_seconds(
                     timestamp, unsent_trigs[inst][0])
-                #print(time_since_detection, ' seconds since last ', inst, ' detection')
 
                 # calculate elapsed time since the last trigger for this instrument
                 time_since_last_trigger = self.delta_t_in_seconds(
                     timestamp, last_trigger[inst])
-                #print(time_since_last_trigger, ' seconds since last ', inst, ' trigger sent')
 
                 # Determine if more time than "wait_before_send" (from config)
                 # has elapsed since detection.
                 if time_since_detection >= instrument_buffer_sizes[inst] - time_before_target:
-                    print('time_since_detection >= instrument_buffer_sizes[inst] - time_before_target')
                     # Determine if sufficient time has passed since last trigger
                     # was sent to inst to create an overlap of "buffer_overlap"
                     # (from config) in the saved data
-                    if time_since_last_trigger >= (
-                        instrument_buffer_sizes[inst] - buffer_overlap):
-                        print('time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap)')
+                    #print('time_since_last_trigger:', time_since_last_trigger)
+                    #print('inst_buffer_sizes[inst]-buffer_overlap', (instrument_buffer_sizes[inst] - buffer_overlap))
+                    if time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap):
+                    #    print('time_since_last_trigger >= (instrument_buffer_sizes[inst] - buffer_overlap)')
                         unsent_trigs[inst].pop(0)
                         trigs_to_send.append(inst)
                         last_trigger[inst] = timestamp
@@ -152,7 +142,6 @@ class SendTriggers:
                         for index, unsent_trig in enumerate(unsent_trigs[inst]):
                             time_since_detection = self.delta_t_in_seconds(
                                 last_trigger[inst], unsent_trigs[inst][index])
-
                             if time_since_detection < min_time_between_targets:
                                 unsent_trigs[inst].pop(index)
 
