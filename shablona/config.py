@@ -50,7 +50,7 @@ adcp_last_seen_threshold = 90
 
 # current threshold below which to ignore targets
 # that do not include a PAMGuard detection
-ADCP_threshold = 0.25 # m/s
+ADCP_threshold = 0 # m/s
 
 # Minimum and maximum expected values for each axis
 classifier_axis_bounds = {
