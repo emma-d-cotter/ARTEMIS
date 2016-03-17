@@ -52,7 +52,7 @@ class track ():
         self.last_pos_angle = random.uniform(self.min_angle_m, self.max_angle_m)
         self.width = random.uniform(sonar_prop.min_target, sonar_prop.max_target)
         self.height = self.width / 3
-        self.speed_mps = random.uniform(1, 2) * self.width
+        self.speed_mps = random.uniform(1, 2)
         self.size_sq_m = self.width * self.height
         self.last_update = time.time()
         self.target_strength = sonar_prop.max_target_strength*random.random() - sonar_prop.min_target_strength
