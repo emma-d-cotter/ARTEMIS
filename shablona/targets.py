@@ -86,43 +86,46 @@ class Target:
         pass
         # extract target data
         nims_indices = self.get_entry('nims')['aggregate_indices']
-        adcp = self.get_entry('adcp')
+        if len(nims_indices) > 1:
+            adcp = self.get_entry('adcp')
 
-        # sort nims data by timestamp
-        sorted(nims_indices,
-               key = lambda x: self.target_space.get_entry_by_index('nims', x)['timestamp'])
+            # sort nims data by timestamp
+            sorted(nims_indices,
+                   key = lambda x: self.target_space.get_entry_by_index('nims', x)['timestamp'])
 
-        # extract all targets from nims data
-        targets = self.extract_targets(nims_indices)
+            # extract all targets from nims data
+            targets = self.extract_targets(nims_indices)
 
-        points_to_avg = []
-        index = 0
-        # determine points between which to calculate velocity (must have at least
-        # M3_averaging_time between the timestamps)
-        while index < (len(targets)-1):
-            start_time = targets[index]['timestamp']
+            points_to_avg = []
+            index = 0
+            # determine points between which to calculate velocity (must have at least
+            # M3_averaging_time between the timestamps)
+            while index < (len(targets)-1):
+                start_time = targets[index]['timestamp']
 
-            for i, target in enumerate(targets):
-                # add to points_to_avg if the difference in time between
-                # target sightings is greater than the M3_averaging_time
-                diff = self.delta_t_in_seconds(target['timestamp'], start_time)
+                for i, target in enumerate(targets):
+                    # add to points_to_avg if the difference in time between
+                    # target sightings is greater than the M3_averaging_time
+                    diff = self.delta_t_in_seconds(target['timestamp'], start_time)
 
-                if diff >= config.M3_avgeraging_time:
-                    points_to_avg.append(targets[i])
-                    index = i
-                    break
+                    if diff >= config.M3_avgeraging_time:
+                        points_to_avg.append(targets[i])
+                        index = i
+                        break
 
-                if i >= (len(targets)-1):
-                    # if the target was less than the M3_averaging_time, use first
-                    # and last points
-                    index = i
-                    points_to_avg.append(targets[0])
-                    points_to_avg.append(targets[-1])
-                    break
+                    if i >= (len(targets)-1):
+                        # if the target was less than the M3_averaging_time, use first
+                        # and last points
+                        index = i
+                        points_to_avg.append(targets[0])
+                        points_to_avg.append(targets[-1])
+                        break
 
-        delta_v = self.calc_delta_v(points_to_avg, adcp)
-
-        return max(delta_v)
+            delta_v = self.calc_delta_v(points_to_avg, adcp)
+            print('delta v for all pts: ', delta_v)
+            return max(delta_v)
+        else:
+            return 0
 
 
     def velocity_between_two_points(self, point1, point2):
@@ -158,7 +161,7 @@ class Target:
         Returns X-Y coordinates of point after transformation.
         """
         # convert target heading to radians, and shift such that zero degrees is center of swath
-        point_heading = (point['last_pos_angle'] - (config.M3_swath[1] - config.M3_swath[0])/2) * pi/180
+        point_heading = (point['last_pos_angle'] - (config.M3_swath[1] - config.M3_swath[0])/2) * math.pi/180
 
         # convert bearing to angle from due N by subtracting AMP angle
         point_heading = point_heading - config.AMP_heading
