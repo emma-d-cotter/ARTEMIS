@@ -19,11 +19,12 @@ def _get_minutes_since_midnight(timestamp):
 
 class Target:
     """"""
-    def __init__(self, target_space, source="Unknown", date=datetime.utcnow(),
-                 classification=None, indices={}):
+    def __init__(self, target_space, source="Unknown", firstseen=datetime.utcnow(),
+                 lastseen=datetime.utcnow(), classification=None, indices={}):
         self.target_space = target_space
         self.source = source
-        self.date = date
+        self.firstseen = firstseen
+        self.lastseen = lastseen
         self.classification = classification
         self.indices = indices
 
@@ -52,12 +53,12 @@ class Target:
         in 'aggregate_indices' field.
         """
         if table == 'nims':
-            old_index = self.indices[table]
-            indices.append(old_index)
-            old_entry = self.get_entry(table)
-            assert(old_entry['aggregate_indices'] != None)
+            old_entry_index = self.indices[table]
+            old_aggs = self.target_space.tables[table][old_entry_index][-1]
+            assert(old_aggs != None)
+            indices.extend(old_aggs)
             new_entry = self.target_space.combine_entries(table, indices)
-            self.target_space.tables[table][old_index] = new_entry
+            self.target_space.tables[table][old_entry_index] = new_entry
 
     def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
@@ -116,7 +117,6 @@ class Target:
                     index = i
 
             delta_v = self.calc_delta_v(points_to_avg, adcp)
-            print('max deltav: ',max(delta_v))
             return max(delta_v)
         else:
             # should calculate first ping using NIMS velocity
@@ -138,9 +138,7 @@ class Target:
 
         point1_cartesian = self.transform_NIMS_to_vector(point1)
         point2_cartesian = self.transform_NIMS_to_vector(point2)
-
         dt = self.delta_t_in_seconds(point1['timestamp'], point2['timestamp'])
-
         # subtract 2-1 to get velocity
         vel = [(point2_cartesian[0] - point1_cartesian[0])/dt,
                (point2_cartesian[1] - point1_cartesian[1])/dt]

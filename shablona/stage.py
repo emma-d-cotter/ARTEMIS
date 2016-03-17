@@ -6,6 +6,7 @@ import datetime
 from rules import SendTriggers
 from targets import Target
 import config
+import time
 
 
 class Stage:
@@ -88,7 +89,7 @@ class Stage:
                 # Data not captured in any other Targets, create a new one
                 target_out = Target(target_space=self.target_space,
                               source=config.site_name + "_auto",
-                              date=self.target_space.get_entry_value_by_index('pamguard', pamguard, 'timestamp'),
+                              firstseen=self.target_space.get_entry_value_by_index('pamguard', pamguard, 'timestamp'),
                               indices={'pamguard': pamguard, 'adcp': adcp})
                 target_out.update_classifier_table
                 self.recent_targets.append(target_out)
@@ -102,9 +103,12 @@ class Stage:
                     return target
             else:
                     if pamguard:
+                        first_timestamp = min(self.target_space.get_entry_value_by_index('pamguard', pamguard[-1], 'timestamp'),
+                                           self.target_space.get_entry_value_by_index('nims', nims[1][0],'timestamp'))
                         latest_timestamp = max(self.target_space.get_entry_value_by_index('pamguard', pamguard[-1], 'timestamp'),
                                            self.target_space.get_entry_value_by_index('nims', nims[1][-1],'timestamp'))
                     else:
+                        first_timestamp = self.target_space.get_entry_value_by_index('nims', nims[1][0],'timestamp')
                         latest_timestamp = self.target_space.get_entry_value_by_index('nims', nims[1][-1],'timestamp')
                         pamguard = None
 
@@ -113,7 +117,8 @@ class Stage:
                         self.target_space.tables['nims'][nims[1][0]][-1] = []  # changes agg_indices to []
                         target_out = Target(target_space=self.target_space,
                                       source=config.site_name + "_auto",
-                                      date=latest_timestamp,
+                                      firstseen=first_timestamp,
+                                      lastseen=latest_timestamp,
                                       indices={'nims': nims[1][0], 'pamguard': pamguard, 'adcp': adcp})
                         self.recent_targets.append(target_out)
                         return target_out
@@ -123,7 +128,8 @@ class Stage:
                         index = self.target_space.append_entry('nims', combined_entry)
                         target_out = Target(target_space=self.target_space,
                                       source=config.site_name + "_auto",
-                                      date=latest_timestamp,
+                                      firstseen=first_timestamp,
+                                      lastseen=latest_timestamp,
                                       indices={'nims': index, 'pamguard': pamguard, 'adcp': adcp})
                         self.recent_targets.append(target_out)
                         return target_out
@@ -179,7 +185,7 @@ class Stage:
             for track_id in track_ids_to_remove: self.data_queues['nims'].pop(track_id)
 
             for recent_target in self.recent_targets:
-                if (datetime.datetime.utcnow() - recent_target.date).seconds >= config.drop_target_time:
+                if (datetime.datetime.utcnow() - recent_target.lastseen).seconds >= config.drop_target_time:
                     print('Start removal process for Target:', recent_target.indices)
                     # Remove recent target from list
                     self.recent_targets.remove(recent_target)
@@ -197,4 +203,6 @@ class Stage:
                     # Update classifier features list
                     self.target_space.update_classifier_tables(recent_target)
                     # Clear nims and pamguard
-                    #self.target_space.update(recent_target)
+                    self.target_space.update(recent_target)
+
+        time.sleep(0.01)
