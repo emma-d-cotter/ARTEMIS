@@ -73,7 +73,7 @@ class SendTriggers:
 
         # add any new triggers to trigger_status list
         for inst in new_trigs:
-            self.trigger_status['unsent_trigs'][inst].append(datetime.utcnow())
+            self.trigger_status['unsent_trigs'][inst].append(target.date)
 
     def evaluate_target_range(self, target):
         """
@@ -104,7 +104,6 @@ class SendTriggers:
         """
         trigs_to_send = []
 
-        # TODO: replace this with timestamp from actual target
         timestamp = datetime.utcnow()
         unsent_trigs = self.trigger_status['unsent_trigs']
         last_trigger = self.trigger_status['last_trigger']
