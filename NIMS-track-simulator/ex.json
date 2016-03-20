@@ -1,7 +1,6 @@
 {
    "ping_num": 14606,
-   "tracks": [
-      {
+   "tracks": [{
          "speed_mps": 0.0,
          "min_angle_m": 0.0,
          "first_ping": 0,

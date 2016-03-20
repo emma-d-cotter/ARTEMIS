@@ -48,7 +48,7 @@ class Stage:
                         track['first_ping'], track['target_strength'], track['width'],
                         track['height'], track['size_sq_m'], track['speed_mps'],
                         track['min_angle_m'], track['min_range_m'], track['max_angle_m'],
-                        track['max_range_m'], track['last_pos_angle'],
+                        track['max_range_m'], track['last_pos_bearing'],
                         track['last_pos_range'], None]
                 indices[track['id']] = self.target_space.append_entry(stream, new_data)
         elif stream in config.data_streams:

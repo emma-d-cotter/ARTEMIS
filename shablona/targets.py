@@ -1,15 +1,38 @@
 from datetime import datetime
 import math
 import config
-
+        {
+            "first_detect",
+            "height",
+            "id",
+            "last_pos_bearing",
+            "last_pos_elevation": 0.0,
+            "last_pos_range": 5.508647918701172,
+            "last_vel_bearing": Infinity,
+            "last_vel_elevation": NaN,
+            "last_vel_range": -Infinity,
+            "length": 0.1428571492433548,
+            "max_bearing_deg": 1338.540771484375,
+            "max_elevation_deg": 0.0,
+            "max_range_m": 5.538654327392578,
+            "min_bearing_deg": 1000.0,
+            "min_elevation_deg": 0.0,
+            "min_range_m": 2.09869122505188,
+            "pings_visible": 10,
+            "size_sq_m": 0.8089292645454407,
+            "speed_mps": 0.0,
+            "target_strength": 0.0,
+            "width": 4.687503814697266
+        }
 
 headers = {}
 headers['adcp'] = ['timestamp', 'speed', 'heading']
 headers['pamguard'] = ['timestamp', 'detection']
+# TODO: need to update nims headers to match real nims (and update simulator)
 headers['nims'] = ['timestamp', 'id', 'pings_visible', 'first_ping',
         'target_strength', 'width', 'height', 'size_sq_m', 'speed_mps',
         'min_angle_m', 'min_range_m', 'max_angle_m', 'max_range_m',
-        'last_pos_angle', 'last_pos_range', 'aggregate_indices']
+        'last_pos_bearing', 'last_pos_range', 'aggregate_indices']
 headers['classifier'] = config.classifier_features
 
 def _get_minutes_since_midnight(timestamp):
@@ -153,7 +176,7 @@ class Target:
         Returns X-Y coordinates of point after transformation.
         """
         # convert target heading to radians, and shift such that zero degrees is center of swath
-        point_heading = (point['last_pos_angle'] - (config.M3_swath[1] - config.M3_swath[0])/2) * math.pi/180
+        point_heading = (point['last_pos_bearing'] - (config.M3_swath[1] - config.M3_swath[0])/2) * math.pi/180
 
         # convert bearing to angle from due N by subtracting AMP angle
         point_heading = point_heading - config.AMP_heading
@@ -279,7 +302,7 @@ class TargetSpace:
             elif column_name in ['target_strength', 'width', 'height',
                                  'size_sq_m', 'speed_mps']:
                 combined_entry.append(sum(values) / float(len(values)))
-            elif column_name in ['last_pos_angle', 'last_pos_range']:
+            elif column_name in ['last_pos_bearing', 'last_pos_range']:
                 combined_entry.append(values[len(values) - 1])
             elif column_name == 'aggregate_indices':
                 combined_entry.append(indices)

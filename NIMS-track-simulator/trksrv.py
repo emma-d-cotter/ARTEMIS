@@ -60,13 +60,19 @@ class track ():
         print('Generated track ', self.id)
 
     def get_buffer(self):
-        # 'ffiffffffffffH'
-        msg = {"speed_mps": self.speed_mps,
+        msg = {"first_detect": 0,
+               "last_pos_elevation": 0,
+               "last_vel_bearing": 0,
+               "last_vel_elevation": 0,
+               "last_vel_range": 0,
+               "min_elevation_deg": 0,
+               "min_elevation_deg": 0,
+               "speed_mps": self.speed_mps,
                "min_angle_m": self.min_angle_m,
                "first_ping": self.first_ping,
                "min_range_m": self.min_range_m,
                "target_strength": self.target_strength,
-               "last_pos_angle": self.last_pos_angle,
+               "last_pos_bearing": self.last_pos_angle,
                "max_angle_m": self.max_angle_m,
                "max_range_m": self.max_range_m,
                "last_pos_range": self.last_pos_range,
@@ -75,7 +81,6 @@ class track ():
                "pings_visible": self.pings_visible,
                "height": self.height,
                "id": self.id}
-        # print(msg)
         return msg
 
     def perturb(self):
