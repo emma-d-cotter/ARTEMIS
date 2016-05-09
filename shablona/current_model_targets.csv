@@ -1,9 +1,0 @@
-id;size;speed;deltav;target_strength;current;time_of_day;passive_acoustics;source;date;classification
-123;1;2;3;4;5;6;7;"MSL_auto";;1.1
-456;7;6;5;4;3;2;1;"MSL_auto";;1.2
-452;1.5;2;3;4;5;6;7;"MSL_manual";;1.1
-451;7;6;5;4;3;2;1.4;"MSL_manual";;1.2
-457;7;6;5;4;3.1;2.2;1;"MSL_auto";;1.2
-458;7;6;5;4;3;2.1;1.6;"MSL_auto";;1.2
-459;1.5;2.2;3.1;4;5;6;7;"MSL_auto";;1.2
-450;1.5;2;3;4;5;5;7.1;"MSL_auto";;1.1
