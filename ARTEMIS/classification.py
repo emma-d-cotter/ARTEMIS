@@ -45,10 +45,7 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
 
     weights = []
     # determine weight for each neighbor
-    print('type(neigh_ind): ',type(neigh_ind))
-    print('neigh_ind:' ,neigh_ind)
-    print('neigh_ind.tolist():', neigh_ind.tolist())
-    for i, ind in enumerate(np.squeeze(neigh_ind.tolist())):
+    for i, ind in enumerate(np.squeeze(neigh_ind.tolist()).tolist()):
         # print("i:", i, "ind:", ind)
         target = target_space.classifier_index_to_target[ind]
         source = target.source
@@ -68,9 +65,9 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
             else:
                 source_weight = 1
 
-        distance = neigh_dist[i]
+        distance = np.squeeze(neigh_dist.tolist()).tolist()[i]
 
-        weights += (1/distance) * source_weight
+        weights += [(1/distance) * source_weight]
 
     return np.array(weights)
 
@@ -258,7 +255,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
     http://en.wikipedia.org/wiki/K-nearest_neighbor_algorithm
     """
 
-    def __init__(self, weights, target_space, radius=1.0,
+    def __init__(self, weights, target_space, radius=5.0,
                  algorithm='auto', leaf_size=30, p=2, metric='minkowski',
                  outliers=None, metric_params=None, **kwargs):
         self._init_params(radius=radius,

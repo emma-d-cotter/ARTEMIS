@@ -63,10 +63,10 @@ classifier_axis_bounds = {
 
 # Background
 background_hyperspaces = [
-	{'size': (.25, 3), # m^2
-	'speed': (1, 5), # m/s
-	'deltav': (0.5, 4), # m/s
-	'target_strength': (90, 150), # ??
+	{'size': (0, 3), # m^2
+	'speed': (0, 5), # m/s
+	'deltav': (0, 4), # m/s
+	'target_strength': (0, 150), # ??
 	'classification': 1},
 
 	{'size': (0,.25), # m^2
