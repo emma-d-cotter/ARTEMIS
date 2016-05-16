@@ -204,6 +204,6 @@ class Stage:
                     # Update classifier features list
                     self.target_space.update_classifier_tables(recent_target)
                     # Clear nims and pamguard
-                    #self.target_space.update(recent_target) # TODO: check out updating.
+                    self.target_space.update(recent_target) # TODO: check out updating.
 
         time.sleep(0.01)

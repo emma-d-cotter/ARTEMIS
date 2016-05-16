@@ -45,6 +45,8 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
 
     weights = []
     # determine weight for each neighbor
+    print('type: ', type(np.squeeze(neigh_ind.tolist()).tolist()))
+    print('np.squeeze(neigh_ind.tolist()).tolist(): ', np.squeeze(neigh_ind.tolist()).tolist())
     for i, ind in enumerate(np.squeeze(neigh_ind.tolist()).tolist()):
         # print("i:", i, "ind:", ind)
         target = target_space.classifier_index_to_target[ind]
