@@ -302,6 +302,9 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
                              'or consider removing them from your dataset.'
                              % outliers)
 
+        if type(neigh_ind) is int:
+            neigh_ind = [neigh_ind]
+            
         weights = self.weight_function(neigh_dist=neigh_dist, neigh_ind=neigh_ind,
                                target_space=self.target_space)
 
