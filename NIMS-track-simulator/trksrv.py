@@ -9,11 +9,11 @@ import math
 import threading
 import codecs
 import json
+
 try:
     import socketserver
 except ImportError:
     import socketserver as SocketServer
-
 
 class sonar_prop:
     # change these to reflect your own system as needed
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     # maximum number of targets allowed
     max_targets = 5
     # maximum number of pings @ max_targets before removing 1 target at random
-    max_pings = 300
+    max_pings = 10
 
     # start with one track
     tracks = [track()]
