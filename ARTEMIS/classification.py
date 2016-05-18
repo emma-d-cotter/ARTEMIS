@@ -45,14 +45,11 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
 
     weights = []
     # determine weight for each neighbor
-    #print('type: ', type(np.squeeze(neigh_ind.tolist()).tolist()))
-    print('np.squeeze(neigh_ind.tolist()).tolist(): ', np.squeeze(neigh_ind.tolist()).tolist())
     inds = np.squeeze(neigh_ind.tolist()).tolist()
     if type(inds) is int:
         inds = [inds]
 
     for i, ind in enumerate(inds):
-        # print("i:", i, "ind:", ind)
         target = target_space.classifier_index_to_target[ind]
         source = target.source
 
@@ -71,7 +68,10 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
             else:
                 source_weight = 1
 
-        distance = np.squeeze(neigh_dist.tolist()).tolist()[i]
+        if type(np.squeeze(neigh_dist.tolist()).tolist()) is float:
+            distance = np.squeeze(neigh_dist.tolist()).tolist()
+        else:
+            distance = np.squeeze(neigh_dist.tolist()).tolist()[i]
         # if a target is exactly in the same space as another target, assign
         # weight of 1 (1/1 = 1)
         if distance == 0:

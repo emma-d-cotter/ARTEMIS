@@ -25,7 +25,7 @@ class Stage:
         # Adds ADCP (necessary for testing when not connected to ADCP)
         unixtime = (datetime.datetime.utcnow() - datetime.datetime(1970,1,1))
         self.addDataToStage('adcp', [unixtime.days*24*60*60 + unixtime.seconds, 1.2, 4.5])
-        #self.startStageProcessing()
+        self.startStageProcessing()
 
     def processDataBeforeStage(self, stream, data):
         """Performs whatever preprocessing necessitated for data from a

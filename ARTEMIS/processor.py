@@ -51,6 +51,10 @@ class ClassificationProcessor:
         """Reads targets from file, creating Target instances and appending
         features and classification to relevant numpy array.
         """
+        # TODO: right now, current model targets stored in ARTEMIS directory.
+        # make this more robust, maybe in config file?
+        dir = os.getcwd()
+        file = os.path.join(dir, 'ARTEMIS', file)
         if format == 'csv':
             if os.path.isfile(file):
                 with open(file, 'r') as f:
@@ -88,7 +92,7 @@ class ClassificationProcessor:
         while True:
             if not self.queue.empty():
                 target = self.queue.get()
-                if target.get_entry('nims') is not None:
+                if target.get_entry('nims') is not None: # TODO: Check that all targets are being classified, may be missingsome if removed first?
                     X = np.array(target.get_classifier_features()).reshape(1, -1)
                     classification = np.squeeze(self.classifier.predict(X)).tolist()
                     target.classification = classification
