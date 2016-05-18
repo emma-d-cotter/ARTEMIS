@@ -45,9 +45,13 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
 
     weights = []
     # determine weight for each neighbor
-    print('type: ', type(np.squeeze(neigh_ind.tolist()).tolist()))
+    #print('type: ', type(np.squeeze(neigh_ind.tolist()).tolist()))
     print('np.squeeze(neigh_ind.tolist()).tolist(): ', np.squeeze(neigh_ind.tolist()).tolist())
-    for i, ind in enumerate(np.squeeze(neigh_ind.tolist()).tolist()):
+    inds = np.squeeze(neigh_ind.tolist()).tolist()
+    if type(inds) is int:
+        inds = [inds]
+
+    for i, ind in enumerate(inds):
         # print("i:", i, "ind:", ind)
         target = target_space.classifier_index_to_target[ind]
         source = target.source
@@ -68,6 +72,10 @@ def classification_weights(neigh_dist, neigh_ind, target_space):
                 source_weight = 1
 
         distance = np.squeeze(neigh_dist.tolist()).tolist()[i]
+        # if a target is exactly in the same space as another target, assign
+        # weight of 1 (1/1 = 1)
+        if distance == 0:
+            distance = 1
 
         weights += [(1/distance) * source_weight]
 
@@ -304,7 +312,7 @@ class RadiusNeighborsClassifier(NeighborsBase, RadiusNeighborsMixin,
 
         if type(neigh_ind) is int:
             neigh_ind = [neigh_ind]
-            
+
         weights = self.weight_function(neigh_dist=neigh_dist, neigh_ind=neigh_ind,
                                target_space=self.target_space)
 

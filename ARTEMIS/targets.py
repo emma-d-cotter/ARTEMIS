@@ -1,29 +1,7 @@
 from datetime import datetime
 import math
 import config
-#       {
-#            "first_detect",
-#            "height",
-#            "id",
-#            "last_pos_bearing",
-#            "last_pos_elevation": 0.0,
-#            "last_pos_range": 5.508647918701172,
-#            "last_vel_bearing": Infinity,
-#            "last_vel_elevation": NaN,
-#            "last_vel_range": -Infinity,
-#            "length": 0.1428571492433548,
-#            "max_bearing_deg": 1338.540771484375,
-#            "max_elevation_deg": 0.0,
-#            "max_range_m": 5.538654327392578,
-#            "min_bearing_deg": 1000.0,
-#            "min_elevation_deg": 0.0,
-#            "min_range_m": 2.09869122505188,
-#            "pings_visible": 10,
-#            "size_sq_m": 0.8089292645454407,
-#            "speed_mps": 0.0,
-#            "target_strength": 0.0,
-#            "width": 4.687503814697266
-#        }
+
 
 headers = {}
 headers['adcp'] = ['timestamp', 'speed', 'heading']
@@ -85,6 +63,8 @@ class Target:
 
     def get_classifier_features(self):
         """Uses Target's data stream entries to update classifier tables."""
+
+
         return [self.get_entry_value('nims', 'size_sq_m'),  # size
                 self.get_entry_value('nims', 'speed_mps'),  # speed
                 self.calculate_deltav(),  # deltav

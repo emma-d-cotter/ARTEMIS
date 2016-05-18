@@ -88,16 +88,17 @@ class ClassificationProcessor:
         while True:
             if not self.queue.empty():
                 target = self.queue.get()
-                X = np.array(target.get_classifier_features()).reshape(1, -1)
-                classification = np.squeeze(self.classifier.predict(X)).tolist()
-                target.classification = classification
-                print('Classified target {0}, classification: {1}'.format(target, classification))
-                self.send_triggers.check_saving_rules(target, classification)
-                #print('trigger status: ', self.send_triggers.trigger_status)
-                self.classification_count += 1
-                if self.classification_count < config.refit_classifier_count:
-                    self.fit_classifier()
-                    self.classification_count = 0
+                if target.get_entry('nims') is not None:
+                    X = np.array(target.get_classifier_features()).reshape(1, -1)
+                    classification = np.squeeze(self.classifier.predict(X)).tolist()
+                    target.classification = classification
+                    print('Classified target {0}, classification: {1}'.format(target, classification))
+                    self.send_triggers.check_saving_rules(target, classification)
+                    #print('trigger status: ', self.send_triggers.trigger_status)
+                    self.classification_count += 1
+                    if self.classification_count < config.refit_classifier_count:
+                        self.fit_classifier()
+                        self.classification_count = 0
             self.send_triggers.send_triggers_if_ready()
 
             time.sleep(0.01)

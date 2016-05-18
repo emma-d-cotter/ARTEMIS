@@ -191,7 +191,7 @@ class Stage:
                     # Remove recent target from list
                     self.recent_targets.remove(recent_target)
                     # Processes any stage data remaining
-                    rt_nims_id = recent_target.get_entry_value('nims','id')
+                    #rt_nims_id = recent_target.get_entry_value('nims','id')
                     #if self.data_queues['nims'].get(rt_nims_id):
                     #    new_target = self.createOrUpdateTarget(adcp=self.data_queues['adcp'],
                     #            pamguard=self.data_queues['pamguard'],
@@ -204,6 +204,6 @@ class Stage:
                     # Update classifier features list
                     self.target_space.update_classifier_tables(recent_target)
                     # Clear nims and pamguard
-                    self.target_space.update(recent_target) # TODO: check out updating.
+                    self.target_space.update(recent_target)
 
         time.sleep(0.01)
